@@ -96,6 +96,9 @@ function calculerImmobilier(p, dureeAnalyse) {
   const flux = [-miseInitiale];
   const detailAnnuel = [];
   let cashFlowCumuleProgressif = 0;
+  // À l'achat, la mise s'est transformée en équité dans le bien (= apport) ; les frais d'acquisition
+  // et travaux sont une perte sèche immédiate. Le patrimoine net (gain/perte par rapport à la mise sortie)
+  // à l'instant 0 est donc : apport (récupéré comme équité) - mise totale = -(frais + travaux).
   const fraisEtTravauxPerdus = fraisAcquisition + p.travauxInitiaux;
   const courbeValeurNette = [{ an: 0, valeur: -fraisEtTravauxPerdus }];
 
@@ -124,7 +127,9 @@ function calculerImmobilier(p, dureeAnalyse) {
       an, loyer, charges, taxe, impot, mensualiteAnnuelle,
       capitalRestant: dataCredit.capitalRestant, cashFlow, equiteAn
     });
-    const valeurNetteAn = (-miseInitiale + cashFlowCumuleProgressif) + equiteAn;
+    // Gain net par rapport à la mise, à date t = -mise + cash-flows cumulés + équité actuelle dans le bien
+    // (cohérent avec valeurFinaleNette = -mise + cashFlows + équité finale, calculé plus bas)
+    const valeurNetteAn = -miseInitiale + cashFlowCumuleProgressif + equiteAn;
     courbeValeurNette.push({ an, valeur: valeurNetteAn });
   }
 
@@ -140,20 +145,22 @@ function calculerImmobilier(p, dureeAnalyse) {
   const fluxAvecSortie = [...flux];
   fluxAvecSortie[fluxAvecSortie.length - 1] += equiteNetteFinale;
 
-  const cashFlowCumule = flux.reduce((a, b) => a + b, 0);
-  const valeurFinaleNette = cashFlowCumule + equiteNetteFinale;
+  const cashFlowCumule = flux.reduce((a, b) => a + b, 0); // inclut -miseInitiale au départ
+  const gainNet = cashFlowCumule + equiteNetteFinale; // -mise + cashflows + équité finale = gain/perte net réel
+  const valeurFinaleNette = gainNet + miseInitiale; // total patrimoine final = mise + gain net
 
   return {
     miseInitiale, flux: fluxAvecSortie, detailAnnuel, valeurFutureBien,
     equiteNetteFinale, equiteNetteBrute, mensualite, cashFlowCumule, valeurFinaleNette,
-    courbeValeurNette, fiscalitePV, plusValueBrute
+    gainNet,
+    courbeValeurNette, fiscalitePV, plusValueBrute, capitalRestantFinal, montantEmprunte
   };
 }
 
 function calculerTitreFinancier(p, dureeAnalyse) {
   const flux = [-p.miseInitiale];
   const detailAnnuel = [];
-  const courbeValeurNette = [{ an: 0, valeur: -p.miseInitiale }];
+  const courbeValeurNette = [{ an: 0, valeur: 0 }];
   let cashFlowCumuleProgressif = 0;
 
   for (let an = 1; an <= dureeAnalyse; an++) {
@@ -165,8 +172,11 @@ function calculerTitreFinancier(p, dureeAnalyse) {
     detailAnnuel.push({ an, revenuBrut, impot, revenuNet });
 
     const valeurMarcheAn = p.miseInitiale * Math.pow(1 + p.tauxProgressionValeur, an);
-    const plusValueLatenteNette = valeurMarcheAn - p.miseInitiale;
-    courbeValeurNette.push({ an, valeur: -p.miseInitiale + cashFlowCumuleProgressif + plusValueLatenteNette });
+    const plusValueLatenteBrute = Math.max(valeurMarcheAn - p.miseInitiale, 0);
+    const impotLatent = plusValueLatenteBrute * p.tauxImpotPlusValue;
+    // Gain net par rapport à la mise, à date t = cash-flows perçus cumulés + plus-value latente nette d'impôt
+    const plusValueLatenteNette = (valeurMarcheAn - p.miseInitiale) - impotLatent;
+    courbeValeurNette.push({ an, valeur: cashFlowCumuleProgressif + plusValueLatenteNette });
   }
 
   const valeurFutureBrute = p.miseInitiale * Math.pow(1 + p.tauxProgressionValeur, dureeAnalyse);
@@ -177,13 +187,76 @@ function calculerTitreFinancier(p, dureeAnalyse) {
   const fluxAvecSortie = [...flux];
   fluxAvecSortie[fluxAvecSortie.length - 1] += valeurFutureNette;
 
-  const cashFlowCumule = flux.reduce((a, b) => a + b, 0);
-  const valeurFinaleNette = cashFlowCumule + valeurFutureNette;
+  const cashFlowCumule = flux.reduce((a, b) => a + b, 0); // inclut -miseInitiale au départ
+  const gainNet = cashFlowCumule + valeurFutureNette; // -mise + cashflows + valeur finale = gain/perte net réel
+  const valeurFinaleNette = gainNet + p.miseInitiale; // total patrimoine final = mise + gain net
 
   return {
     miseInitiale: p.miseInitiale, flux: fluxAvecSortie, detailAnnuel,
     valeurFutureNette, cashFlowCumule, valeurFinaleNette,
+    gainNet,
     courbeValeurNette
+  };
+}
+
+// Calcule l'impôt de sortie sur les gains d'une assurance-vie (rachat total en une fois),
+// selon le régime des versements post-27/09/2017.
+// Avant 8 ans : PFU 30 % (12,8 % IR + 17,2 % PS), sans abattement.
+// Après 8 ans : 7,5 % IR (au-delà d'un abattement annuel) + 17,2 % PS sur la totalité des gains (pas d'abattement sur les PS).
+function calculerImpotAssuranceVie(gains, dureeDetention, abattement) {
+  if (gains <= 0) return { impot: 0, abattementApplique: 0, impotIR: 0, impotPS: 0 };
+
+  const impotPS = gains * 0.172; // prélèvements sociaux : toujours sur la totalité, jamais d'abattement
+
+  if (dureeDetention < 8) {
+    const impotIR = gains * 0.128;
+    return { impot: impotIR + impotPS, abattementApplique: 0, impotIR, impotPS };
+  }
+
+  const abattementApplique = Math.min(gains, abattement);
+  const gainsImposablesIR = gains - abattementApplique;
+  const impotIR = gainsImposablesIR * 0.075;
+  return { impot: impotIR + impotPS, abattementApplique, impotIR, impotPS };
+}
+
+function calculerAssuranceVie(p, dureeAnalyse) {
+  const rendementNetFrais = p.rendementAnnuelBrut - p.fraisGestionAnnuels;
+  const courbeValeurNette = [{ an: 0, valeur: 0 }];
+  const detailAnnuel = [];
+  let valeurContrat = p.versementInitial;
+
+  for (let an = 1; an <= dureeAnalyse; an++) {
+    valeurContrat *= (1 + rendementNetFrais);
+    const gainsLatents = valeurContrat - p.versementInitial;
+    const { impot } = calculerImpotAssuranceVie(gainsLatents, an, p.abattementAnnuel);
+    detailAnnuel.push({ an, valeurContrat, gainsLatents, impotSiSortie: impot });
+    // Gain net par rapport à la mise, à date t = gain latent net d'impôt (la mise n'est ni gagnée ni perdue,
+    // elle reste intégralement dans le contrat ; cohérent avec valeurFinaleNette - miseInitiale calculé plus bas)
+    courbeValeurNette.push({ an, valeur: gainsLatents - impot });
+  }
+
+  const valeurFinaleBrute = valeurContrat;
+  const gainsFinaux = valeurFinaleBrute - p.versementInitial;
+  const { impot: impotFinal, abattementApplique, impotIR, impotPS } = calculerImpotAssuranceVie(gainsFinaux, dureeAnalyse, p.abattementAnnuel);
+  const valeurFinaleNette = valeurFinaleBrute - impotFinal;
+
+  // Un seul flux de sortie au terme (capitalisation pure, pas de cash-flow intermédiaire perçu)
+  const fluxFinal = new Array(dureeAnalyse + 1).fill(0);
+  fluxFinal[0] = -p.versementInitial;
+  fluxFinal[dureeAnalyse] = valeurFinaleNette;
+
+  return {
+    miseInitiale: p.versementInitial,
+    flux: fluxFinal,
+    detailAnnuel,
+    courbeValeurNette,
+    valeurFinaleBrute,
+    gainsFinaux,
+    impotFinal, impotIR, impotPS,
+    abattementApplique,
+    valeurFinaleNette,
+    gainNet: valeurFinaleNette - p.versementInitial,
+    cashFlowCumule: -p.versementInitial, // aucun cash-flow intermédiaire perçu, tout est capitalisé jusqu'à la sortie
   };
 }
 

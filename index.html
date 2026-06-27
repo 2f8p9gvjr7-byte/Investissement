@@ -3,52 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Comparateur">
 <title>Comparateur de rendements — Immobilier vs Marchés</title>
-<meta name="description" content="Comparez le rendement net d'un investissement immobilier (avec crédit) à celui d'une action, d'une obligation ou d'un ETF, sur une durée choisie.">
+<meta name="description" content="Comparez le rendement net d'un investissement immobilier (avec crédit) à celui d'une action, d'une obligation, d'un ETF ou d'une assurance-vie, sur une durée choisie.">
 
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#0e1015">
+<meta name="theme-color" content="#0f1d35">
 
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="entete">
-  <div class="entete-marque">
-    <img src="icon-192.png" alt="" class="logo" width="40" height="40">
-    <div>
-      <div class="entete-titre">Comparateur de rendements</div>
-      <div class="entete-sub">Immobilier (avec crédit) vs Action · Obligation · ETF — TRI et valeur nette sur durée choisie</div>
+<div id="header">
+  <div class="header-top">
+    <div class="marque">
+      <img src="icon-192.png" alt="" class="logo" width="38" height="38">
+      <div>
+        <div class="logo-title">COMPARATEUR</div>
+        <div class="logo-sub">Immobilier · Action · Obligation · ETF · Assurance-vie</div>
+      </div>
+    </div>
+    <div class="duree-control">
+      <label for="dureeAnalyse">Durée</label>
+      <input type="range" id="dureeAnalyse" min="1" max="40" value="15">
+      <span class="duree-val mono" id="dureeVal">15 ans</span>
     </div>
   </div>
-  <div class="duree-control">
-    <label for="dureeAnalyse">Durée d'analyse</label>
-    <input type="range" id="dureeAnalyse" min="1" max="40" value="15">
-    <span class="duree-val mono" id="dureeVal">15 ans</span>
+
+  <div class="tri-bar" id="triBar" aria-label="TRI par support, mis à jour en direct"></div>
+</div>
+
+<div id="corps">
+
+  <div class="intro-note">
+    Remplis les paramètres de chaque support ci-dessous. Les résultats détaillés et le graphique de comparaison se mettent à jour en bas de page à chaque modification.
   </div>
-</header>
 
-<main class="corps">
-
-  <!-- RÉSULTATS -->
-  <section class="resultats-grille" id="resultatsGrille" aria-label="Résultats comparatifs"></section>
-
-  <!-- GRAPHIQUE -->
-  <section class="graphique-bloc">
-    <div class="graphique-titre">Évolution de la valeur cumulée nette, après impôt sur la plus-value (réelle ou simulée à chaque date)</div>
-    <div id="graphique" class="graphique-svg-wrap"></div>
-    <div class="graphique-legende" id="graphiqueLegende"></div>
-  </section>
-
-  <!-- PARAMÈTRES -->
-  <section class="params-grille">
+  <!-- SAISIES -->
+  <div class="saisies-grille">
 
     <!-- IMMOBILIER -->
-    <div class="param-panneau" data-accent="immobilier">
-      <div class="param-panneau-titre">Immobilier</div>
-      <div class="param-panneau-corps" id="formImmo">
+    <div class="panneau" style="--c: var(--immobilier)">
+      <div class="panneau-head">
+        <span class="panneau-titre">Immobilier</span>
+      </div>
+      <div class="panneau-corps" id="formImmo">
 
         <div class="section-bloc">
           <div class="section-titre">Acquisition</div>
@@ -123,7 +125,7 @@
         </div>
 
         <div class="note-fiscale">
-          Investissement locatif : impôt sur la plus-value au barème français en vigueur (19&nbsp;% IR + 17,2&nbsp;% prélèvements sociaux, abattements pour durée de détention jusqu'à exonération totale à 22&nbsp;ans pour l'IR et 30&nbsp;ans pour les PS, plus surtaxe au-delà de 50&nbsp;000&nbsp;€ de plus-value nette).
+          Investissement locatif : impôt sur la plus-value au barème français en vigueur (19&nbsp;% IR + 17,2&nbsp;% prélèvements sociaux, abattements pour durée de détention jusqu'à exonération totale à 22&nbsp;ans pour l'IR et 30&nbsp;ans pour les PS, plus surtaxe au-delà de 50&nbsp;000&nbsp;€ de plus-value nette). Le capital restant dû au crédit est automatiquement soldé sur le produit de la vente.
           <div class="detail-fiscal-chiffre" id="detailFiscalImmo"></div>
         </div>
 
@@ -131,26 +133,56 @@
     </div>
 
     <!-- ACTION -->
-    <div class="param-panneau" data-accent="action">
-      <div class="param-panneau-titre">Action</div>
-      <div class="param-panneau-corps" id="formAction"></div>
+    <div class="panneau" style="--c: var(--action)">
+      <div class="panneau-head">
+        <span class="panneau-titre">Action</span>
+        <button class="btn-sync" data-target="action" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+      </div>
+      <div class="panneau-corps" id="formAction"></div>
     </div>
 
     <!-- OBLIGATION -->
-    <div class="param-panneau" data-accent="obligation">
-      <div class="param-panneau-titre">Obligation</div>
-      <div class="param-panneau-corps" id="formObligation"></div>
+    <div class="panneau" style="--c: var(--obligation)">
+      <div class="panneau-head">
+        <span class="panneau-titre">Obligation</span>
+        <button class="btn-sync" data-target="obligation" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+      </div>
+      <div class="panneau-corps" id="formObligation"></div>
     </div>
 
     <!-- ETF -->
-    <div class="param-panneau" data-accent="etf">
-      <div class="param-panneau-titre">ETF</div>
-      <div class="param-panneau-corps" id="formEtf"></div>
+    <div class="panneau" style="--c: var(--etf)">
+      <div class="panneau-head">
+        <span class="panneau-titre">ETF</span>
+        <button class="btn-sync" data-target="etf" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+      </div>
+      <div class="panneau-corps" id="formEtf"></div>
     </div>
 
-  </section>
+    <!-- ASSURANCE-VIE -->
+    <div class="panneau" style="--c: var(--av)">
+      <div class="panneau-head">
+        <span class="panneau-titre">Assurance-vie</span>
+        <button class="btn-sync" data-target="av" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+      </div>
+      <div class="panneau-corps" id="formAv"></div>
+    </div>
 
-</main>
+  </div>
+
+  <!-- RÉSULTATS -->
+  <div class="resultats-titre">Résultats comparatifs</div>
+  <div class="resultats-grille" id="resultatsGrille" aria-label="Résultats comparatifs détaillés"></div>
+
+  <div class="graphique-bloc">
+    <div class="graphique-titre">Évolution du gain net cumulé par rapport à la mise (flux perçus + plus-value, après impôt réel ou simulé à chaque date)</div>
+    <div id="graphique" class="graphique-svg-wrap"></div>
+    <div class="graphique-legende" id="graphiqueLegende"></div>
+  </div>
+
+  <div class="footer">📱 Installable · Calculs effectués localement, aucune donnée transmise</div>
+
+</div>
 
 <script src="engine.js"></script>
 <script src="app.js"></script>

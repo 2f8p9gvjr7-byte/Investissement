@@ -1,26 +1,16 @@
 {
   "name": "Comparateur de rendements — Immobilier vs Marchés",
   "short_name": "Comparateur",
-  "description": "Comparez le rendement net d'un investissement immobilier (avec crédit) à celui d'une action, d'une obligation ou d'un ETF, sur une durée choisie.",
+  "description": "Comparez le rendement net d'un investissement immobilier (avec crédit) à celui d'une action, d'une obligation, d'un ETF ou d'une assurance-vie, sur une durée choisie.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0e1015",
-  "theme_color": "#0e1015",
+  "background_color": "#0f1d35",
+  "theme_color": "#0f1d35",
   "orientation": "portrait-primary",
   "lang": "fr",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }

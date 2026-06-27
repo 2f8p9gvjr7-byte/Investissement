@@ -28,11 +28,25 @@ const etf = {
   tauxImpotRevenu: 0.30, tauxProgressionValeur: 0.05, tauxImpotPlusValue: 0.30,
 };
 
+const av = {
+  versementInitial: 61000, rendementAnnuelBrut: 0.035, fraisGestionAnnuels: 0.008,
+  abattementAnnuel: 4600,
+};
+
 const COULEURS = {
-  immobilier: "#d4a657",
-  action: "#5fb3a3",
-  obligation: "#7b9fd4",
-  etf: "#c47a6b",
+  immobilier: "#f5a524",
+  action: "#4ade80",
+  obligation: "#60a5fa",
+  etf: "#ff8a4d",
+  av: "#b87aff",
+};
+
+const NOMS = {
+  immobilier: "Immobilier",
+  action: "Action",
+  obligation: "Obligation",
+  etf: "ETF",
+  av: "Assurance-vie",
 };
 
 // ============================================================
@@ -87,9 +101,37 @@ function genererFormulaireTitre(prefix, data, labelRevenu) {
     </div>`;
 }
 
+function genererFormulaireAv(data) {
+  return `
+    <div class="section-bloc">
+      <div class="section-titre">Versement</div>
+      <div class="section-grille">
+        ${champHtml("av_versementInitial", "Versement initial", data.versementInitial, "€", 1000)}
+      </div>
+    </div>
+    <div class="section-bloc">
+      <div class="section-titre">Rendement & frais</div>
+      <div class="section-grille">
+        ${champHtml("av_rendementAnnuelBrut", "Rendement annuel brut", (data.rendementAnnuelBrut * 100).toFixed(2), "%", 0.1)}
+        ${champHtml("av_fraisGestionAnnuels", "Frais de gestion annuels", (data.fraisGestionAnnuels * 100).toFixed(2), "%", 0.05)}
+      </div>
+    </div>
+    <div class="section-bloc">
+      <div class="section-titre">Fiscalité de sortie</div>
+      <div class="section-grille">
+        ${champHtml("av_abattementAnnuel", "Abattement après 8 ans", data.abattementAnnuel, "€", 100)}
+      </div>
+    </div>
+    <div class="note-fiscale">
+      Rachat total simulé à la durée choisie. Avant 8 ans : 30&nbsp;% (12,8&nbsp;% IR + 17,2&nbsp;% PS) sans abattement. Après 8 ans : abattement annuel sur les gains (4&nbsp;600&nbsp;€ pour une personne seule, 9&nbsp;200&nbsp;€ pour un couple), puis 7,5&nbsp;% IR + 17,2&nbsp;% PS (les PS s'appliquent toujours sur la totalité des gains, sans abattement).
+      <div class="detail-fiscal-chiffre" id="detailFiscalAv"></div>
+    </div>`;
+}
+
 document.getElementById("formAction").innerHTML = genererFormulaireTitre("action", action, "Dividende");
 document.getElementById("formObligation").innerHTML = genererFormulaireTitre("obligation", obligation, "Coupon");
 document.getElementById("formEtf").innerHTML = genererFormulaireTitre("etf", etf, "Distribution");
+document.getElementById("formAv").innerHTML = genererFormulaireAv(av);
 
 // ============================================================
 // LIAISON DES CHAMPS <-> ÉTAT
@@ -99,6 +141,7 @@ const PCT_FIELDS = new Set([
   "fraisAcquisitionPct", "tauxCroissanceLoyer", "tauxCroissanceCharges", "tauxCroissanceTaxe",
   "tauxImpot", "tauxCredit", "tauxProgressionValeur",
   "rendementAnnuelInitial", "tauxCroissanceRendement", "tauxImpotRevenu", "tauxImpotPlusValue",
+  "rendementAnnuelBrut", "fraisGestionAnnuels",
 ]);
 
 function lierFormulaire(prefix, data) {
@@ -118,6 +161,7 @@ lierFormulaire("immo", immo);
 lierFormulaire("action", action);
 lierFormulaire("obligation", obligation);
 lierFormulaire("etf", etf);
+lierFormulaire("av", av);
 
 document.getElementById("dureeAnalyse").addEventListener("input", (e) => {
   dureeAnalyse = parseInt(e.target.value, 10);
@@ -126,14 +170,54 @@ document.getElementById("dureeAnalyse").addEventListener("input", (e) => {
 });
 
 // ============================================================
+// BOUTON "SYNCHRONISER" — recopie la mise totale immobilière
+// ============================================================
+
+function miseTotaleImmobiliere() {
+  return immo.apport + immo.prixBien * immo.fraisAcquisitionPct + immo.travauxInitiaux;
+}
+
+function synchroniserMise(cible) {
+  const montant = Math.round(miseTotaleImmobiliere());
+  if (cible === "av") {
+    av.versementInitial = montant;
+    document.getElementById("av_versementInitial").value = montant;
+  } else {
+    const data = { action, obligation, etf }[cible];
+    data.miseInitiale = montant;
+    document.getElementById(`${cible}_miseInitiale`).value = montant;
+  }
+  recalculer();
+}
+
+document.querySelectorAll(".btn-sync").forEach((btn) => {
+  btn.addEventListener("click", () => synchroniserMise(btn.dataset.target));
+});
+
+// ============================================================
+// EN-TÊTE STICKY — pastilles TRI
+// ============================================================
+
+function rendreTriBar(resultats) {
+  const ordre = ["immobilier", "action", "obligation", "etf", "av"];
+  document.getElementById("triBar").innerHTML = ordre
+    .map((k) => `
+      <div class="tri-pastille" style="--c:${COULEURS[k]}">
+        <div class="nom">${NOMS[k]}</div>
+        <div class="val">${fmtPct(resultats[k].tri)}</div>
+      </div>`)
+    .join("");
+}
+
+// ============================================================
 // RENDU DES CARTES DE RÉSULTATS
 // ============================================================
 
-function carteResultatHtml(nom, accentVar, r) {
+function carteResultatHtml(cle, r) {
   const multiple = r.miseInitiale > 0 ? r.valeurFinaleNette / r.miseInitiale : null;
   return `
-    <div class="resultat-carte" style="--accent: var(${accentVar})">
-      <div class="resultat-nom">${nom}</div>
+    <div class="resultat-carte" style="--c:${COULEURS[cle]}">
+      <div class="resultat-nom">${NOMS[cle]}</div>
       <div class="resultat-tri">${fmtPct(r.tri)}</div>
       <div class="resultat-tri-label">TRI annuel</div>
       <div class="resultat-grille">
@@ -156,17 +240,12 @@ function dessinerGraphique(resultats) {
   const largeur = conteneur.clientWidth || 800;
   const hauteur = 320;
 
-  const series = [
-    { label: "Immobilier", color: COULEURS.immobilier, points: resultats.immobilier.courbeValeurNette },
-    { label: "Action", color: COULEURS.action, points: resultats.action.courbeValeurNette },
-    { label: "Obligation", color: COULEURS.obligation, points: resultats.obligation.courbeValeurNette },
-    { label: "ETF", color: COULEURS.etf, points: resultats.etf.courbeValeurNette },
-  ];
+  const ordre = ["immobilier", "action", "obligation", "etf", "av"];
+  const series = ordre.map((k) => ({ label: NOMS[k], color: COULEURS[k], points: resultats[k].courbeValeurNette }));
 
   const toutesValeurs = series.flatMap((s) => s.points.map((p) => p.valeur));
   let yMin = Math.min(...toutesValeurs, 0);
   let yMax = Math.max(...toutesValeurs, 0);
-  // marge visuelle de 8% en haut/bas pour ne pas coller les courbes aux bords
   const padY = (yMax - yMin) * 0.08 || 1000;
   yMin -= padY;
   yMax += padY;
@@ -177,34 +256,30 @@ function dessinerGraphique(resultats) {
   const xPos = (an) => GRAPH_MARGE.gauche + (an / dureeAnalyse) * zoneL;
   const yPos = (val) => GRAPH_MARGE.haut + zoneH - ((val - yMin) / (yMax - yMin)) * zoneH;
 
-  // --- Grille horizontale + labels Y ---
   const nLignesY = 5;
   let grilleSvg = "";
   let labelsYSvg = "";
   for (let i = 0; i <= nLignesY; i++) {
     const val = yMin + (i / nLignesY) * (yMax - yMin);
     const y = yPos(val);
-    grilleSvg += `<line x1="${GRAPH_MARGE.gauche}" y1="${y}" x2="${largeur - GRAPH_MARGE.droite}" y2="${y}" stroke="#2a2f3a" stroke-width="1" stroke-dasharray="2 4"/>`;
-    labelsYSvg += `<text x="${GRAPH_MARGE.gauche - 8}" y="${y}" fill="#8b8f9c" font-size="11" text-anchor="end" dominant-baseline="middle">${(val / 1000).toFixed(0)}k</text>`;
+    grilleSvg += `<line x1="${GRAPH_MARGE.gauche}" y1="${y}" x2="${largeur - GRAPH_MARGE.droite}" y2="${y}" stroke="#2a3f6b" stroke-width="1" stroke-dasharray="2 4"/>`;
+    labelsYSvg += `<text x="${GRAPH_MARGE.gauche - 8}" y="${y}" fill="#9aa8c2" font-size="11" text-anchor="end" dominant-baseline="middle">${(val / 1000).toFixed(0)}k</text>`;
   }
 
-  // --- Ligne zéro plus marquée si dans la plage ---
   let ligneZeroSvg = "";
   if (yMin < 0 && yMax > 0) {
     const y0 = yPos(0);
-    ligneZeroSvg = `<line x1="${GRAPH_MARGE.gauche}" y1="${y0}" x2="${largeur - GRAPH_MARGE.droite}" y2="${y0}" stroke="#5a5f6c" stroke-width="1.5"/>`;
+    ligneZeroSvg = `<line x1="${GRAPH_MARGE.gauche}" y1="${y0}" x2="${largeur - GRAPH_MARGE.droite}" y2="${y0}" stroke="#c5d3e3" stroke-width="1.5"/>`;
   }
 
-  // --- Labels X (années) ---
   const pasX = dureeAnalyse <= 10 ? 1 : dureeAnalyse <= 20 ? 2 : Math.ceil(dureeAnalyse / 10);
   let labelsXSvg = "";
   for (let an = 0; an <= dureeAnalyse; an += pasX) {
     const x = xPos(an);
-    labelsXSvg += `<text x="${x}" y="${hauteur - GRAPH_MARGE.bas + 20}" fill="#8b8f9c" font-size="11" text-anchor="middle">${an}</text>`;
+    labelsXSvg += `<text x="${x}" y="${hauteur - GRAPH_MARGE.bas + 20}" fill="#9aa8c2" font-size="11" text-anchor="middle">${an}</text>`;
   }
-  labelsXSvg += `<text x="${GRAPH_MARGE.gauche + zoneL / 2}" y="${hauteur - 4}" fill="#5a5f6c" font-size="11" text-anchor="middle">Années</text>`;
+  labelsXSvg += `<text x="${GRAPH_MARGE.gauche + zoneL / 2}" y="${hauteur - 4}" fill="#9aa8c2" font-size="11" text-anchor="middle">Années</text>`;
 
-  // --- Courbes ---
   let courbesSvg = "";
   let pointsInteractifsSvg = "";
   series.forEach((s) => {
@@ -226,12 +301,10 @@ function dessinerGraphique(resultats) {
     </svg>
     <div class="graphique-tooltip" id="graphiqueTooltip" hidden></div>`;
 
-  // Légende
   document.getElementById("graphiqueLegende").innerHTML = series
     .map((s) => `<span class="legende-item"><span class="legende-pastille" style="background:${s.color}"></span>${s.label}</span>`)
     .join("");
 
-  // Interaction tooltip au survol
   const tooltip = document.getElementById("graphiqueTooltip");
   const svgEl = document.getElementById("svgGraphique");
   svgEl.querySelectorAll(".point-hover").forEach((pt) => {
@@ -250,12 +323,13 @@ function dessinerGraphique(resultats) {
 window.addEventListener("resize", () => recalculer());
 
 // ============================================================
-// DÉTAIL FISCAL IMMOBILIER
+// DÉTAIL FISCAL IMMOBILIER ET ASSURANCE-VIE
 // ============================================================
 
 function rendreDetailFiscalImmo(r) {
   const f = r.fiscalitePV;
   let html = `
+    <span>Capital restant dû à la sortie : <strong>${fmtEUR(r.capitalRestantFinal)}</strong> (soldé sur le produit de la vente)</span>
     <span>Plus-value brute estimée : <strong>${fmtEUR(r.plusValueBrute)}</strong></span>
     <span>Impôt IR : ${fmtEUR(f.impotIR)} (abattement ${fmtPct(f.abattementIR)})</span>
     <span>Prélèvements sociaux : ${fmtEUR(f.impotPS)} (abattement ${fmtPct(f.abattementPS)})</span>`;
@@ -264,6 +338,17 @@ function rendreDetailFiscalImmo(r) {
   }
   html += `<span class="detail-fiscal-total">Total impôt à la revente : <strong>${fmtEUR(f.total)}</strong></span>`;
   document.getElementById("detailFiscalImmo").innerHTML = html;
+}
+
+function rendreDetailFiscalAv(r) {
+  const html = `
+    <span>Valeur brute du contrat : <strong>${fmtEUR(r.valeurFinaleBrute)}</strong></span>
+    <span>Gains réalisés : ${fmtEUR(r.gainsFinaux)}</span>
+    <span>Abattement appliqué : ${fmtEUR(r.abattementApplique)}</span>
+    <span>Impôt IR : ${fmtEUR(r.impotIR)}</span>
+    <span>Prélèvements sociaux : ${fmtEUR(r.impotPS)}</span>
+    <span class="detail-fiscal-total">Total impôt à la sortie : <strong>${fmtEUR(r.impotFinal)}</strong></span>`;
+  document.getElementById("detailFiscalAv").innerHTML = html;
 }
 
 // ============================================================
@@ -275,21 +360,27 @@ function recalculer() {
   const rAction = calculerTitreFinancier(action, dureeAnalyse);
   const rObligation = calculerTitreFinancier(obligation, dureeAnalyse);
   const rEtf = calculerTitreFinancier(etf, dureeAnalyse);
+  const rAv = calculerAssuranceVie(av, dureeAnalyse);
 
   const resultats = {
     immobilier: { ...rImmo, tri: calculerTRI(rImmo.flux) },
     action: { ...rAction, tri: calculerTRI(rAction.flux) },
     obligation: { ...rObligation, tri: calculerTRI(rObligation.flux) },
     etf: { ...rEtf, tri: calculerTRI(rEtf.flux) },
+    av: { ...rAv, tri: calculerTRI(rAv.flux) },
   };
 
+  rendreTriBar(resultats);
+
   document.getElementById("resultatsGrille").innerHTML =
-    carteResultatHtml("Immobilier", "--immobilier", resultats.immobilier) +
-    carteResultatHtml("Action", "--action", resultats.action) +
-    carteResultatHtml("Obligation", "--obligation", resultats.obligation) +
-    carteResultatHtml("ETF", "--etf", resultats.etf);
+    carteResultatHtml("immobilier", resultats.immobilier) +
+    carteResultatHtml("action", resultats.action) +
+    carteResultatHtml("obligation", resultats.obligation) +
+    carteResultatHtml("etf", resultats.etf) +
+    carteResultatHtml("av", resultats.av);
 
   rendreDetailFiscalImmo(resultats.immobilier);
+  rendreDetailFiscalAv(resultats.av);
   dessinerGraphique(resultats);
 }
 
@@ -301,8 +392,6 @@ recalculer();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {
-      // L'app fonctionne sans le mode hors-ligne si l'enregistrement échoue.
-    });
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
   });
 }
