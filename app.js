@@ -6,6 +6,7 @@ let dureeAnalyse = 15;
 
 const immo = {
   prixBien: 200000, apport: 40000, fraisAcquisitionPct: 0.08, travauxInitiaux: 5000,
+  montantEmprunte: 181000, // par défaut : (prixBien + frais + travaux) - apport, modifiable librement
   loyerAnnuelInitial: 9600, tauxCroissanceLoyer: 0.015,
   chargesEntretienInitial: 1200, tauxCroissanceCharges: 0.02,
   taxeFonciereInitiale: 900, tauxCroissanceTaxe: 0.02,
@@ -177,6 +178,16 @@ function miseTotaleImmobiliere() {
   return immo.apport + immo.prixBien * immo.fraisAcquisitionPct + immo.travauxInitiaux;
 }
 
+function recalculerMontantEmprunteAuto() {
+  const coutTotal = immo.prixBien + immo.prixBien * immo.fraisAcquisitionPct + immo.travauxInitiaux;
+  const montant = Math.max(Math.round(coutTotal - immo.apport), 0);
+  immo.montantEmprunte = montant;
+  document.getElementById("immo_montantEmprunte").value = montant;
+  recalculer();
+}
+
+document.getElementById("btnRecalcEmprunt").addEventListener("click", recalculerMontantEmprunteAuto);
+
 function synchroniserMise(cible) {
   const montant = Math.round(miseTotaleImmobiliere());
   if (cible === "av") {
@@ -329,6 +340,7 @@ window.addEventListener("resize", () => recalculer());
 function rendreDetailFiscalImmo(r) {
   const f = r.fiscalitePV;
   let html = `
+    <span>Montant emprunté : <strong>${fmtEUR(immo.montantEmprunte)}</strong> · mensualité : ${fmtEUR(r.mensualite)}</span>
     <span>Capital restant dû à la sortie : <strong>${fmtEUR(r.capitalRestantFinal)}</strong> (soldé sur le produit de la vente)</span>
     <span>Plus-value brute estimée : <strong>${fmtEUR(r.plusValueBrute)}</strong></span>
     <span>Impôt IR : ${fmtEUR(f.impotIR)} (abattement ${fmtPct(f.abattementIR)})</span>

@@ -89,18 +89,25 @@ function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention) {
 function calculerImmobilier(p, dureeAnalyse) {
   const fraisAcquisition = p.prixBien * p.fraisAcquisitionPct;
   const miseInitiale = p.apport + fraisAcquisition + p.travauxInitiaux;
-  const montantEmprunte = Math.max(p.prixBien - p.apport, 0);
+  const coutTotalOperation = p.prixBien + fraisAcquisition + p.travauxInitiaux;
+  // Montant emprunté : paramétrable directement (p.montantEmprunte), sinon calculé par défaut
+  // comme le solde à financer une fois l'apport déduit du coût total (bien + frais + travaux).
+  const montantEmprunte = Math.max(
+    p.montantEmprunte !== undefined && p.montantEmprunte !== null
+      ? p.montantEmprunte
+      : coutTotalOperation - p.apport,
+    0
+  );
 
   const { mensualite, parAn } = tableauAmortissement(montantEmprunte, p.tauxCredit, p.dureeCredit, dureeAnalyse);
 
   const flux = [-miseInitiale];
   const detailAnnuel = [];
   let cashFlowCumuleProgressif = 0;
-  // À l'achat, la mise s'est transformée en équité dans le bien (= apport) ; les frais d'acquisition
-  // et travaux sont une perte sèche immédiate. Le patrimoine net (gain/perte par rapport à la mise sortie)
-  // à l'instant 0 est donc : apport (récupéré comme équité) - mise totale = -(frais + travaux).
-  const fraisEtTravauxPerdus = fraisAcquisition + p.travauxInitiaux;
-  const courbeValeurNette = [{ an: 0, valeur: -fraisEtTravauxPerdus }];
+  // Patrimoine net à l'achat (an=0) : équité initiale dans le bien (prix - dette contractée) moins la mise totale sortie.
+  // Généralise correctement le cas où l'emprunt finance aussi tout ou partie des frais/travaux.
+  const equiteInitiale = p.prixBien - montantEmprunte;
+  const courbeValeurNette = [{ an: 0, valeur: -miseInitiale + equiteInitiale }];
 
   for (let an = 1; an <= dureeAnalyse; an++) {
     const loyer = p.loyerAnnuelInitial * Math.pow(1 + p.tauxCroissanceLoyer, an - 1);

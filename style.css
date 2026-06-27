@@ -90,7 +90,13 @@ html, body {
 .section-grille { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 10px; }
 
 .champ { display: flex; flex-direction: column; gap: 4px; }
-.champ-label { font-size: 10.5px; color: var(--sub); font-weight: 600; }
+.champ-label { font-size: 10.5px; color: var(--sub); font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.btn-recalc {
+  font-size: 9.5px; font-weight: 700; color: var(--amber); background: transparent;
+  border: 1px solid var(--amber); padding: 1px 6px; border-radius: 3px; cursor: pointer;
+  -webkit-appearance: none; line-height: 1.4;
+}
+.btn-recalc:active { opacity: 0.6; }
 .champ-input-wrap { position: relative; display: flex; align-items: center; }
 .champ-input {
   width: 100%; background: var(--bg); border: 1px solid var(--bor); color: var(--txt);
