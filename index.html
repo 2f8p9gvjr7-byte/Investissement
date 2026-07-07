@@ -26,10 +26,17 @@
         <div class="logo-sub">Immobilier · Action · Obligation · ETF · Assurance-vie</div>
       </div>
     </div>
-    <div class="duree-control">
-      <label for="dureeAnalyse">Durée</label>
-      <input type="range" id="dureeAnalyse" min="1" max="40" value="15">
-      <span class="duree-val mono" id="dureeVal">15 ans</span>
+    <div class="controles-transverses">
+      <div class="duree-control">
+        <label for="dureeAnalyse">Durée</label>
+        <input type="range" id="dureeAnalyse" min="1" max="40" value="15">
+        <span class="duree-val mono" id="dureeVal">15 ans</span>
+      </div>
+      <div class="duree-control">
+        <label for="tauxActualisation">Taux d'actualisation (VAN)</label>
+        <input type="range" id="tauxActualisation" min="0" max="10" step="0.1" value="2">
+        <span class="duree-val mono" id="tauxActualisationVal">2,0 %</span>
+      </div>
     </div>
   </div>
 
@@ -49,6 +56,7 @@
     <div class="panneau" style="--c: var(--immobilier)">
       <div class="panneau-head">
         <span class="panneau-titre">Immobilier</span>
+        <button class="btn-pdf" data-support="immobilier" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
       </div>
       <div class="panneau-corps" id="formImmo">
 
@@ -94,6 +102,12 @@
             <label class="champ"><span class="champ-label">Croissance du loyer</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceLoyer" value="1.5" step="0.1"><span class="champ-suffix">%</span></div>
             </label>
+            <label class="champ"><span class="champ-label">Vacance locative <span style="color:var(--mut);font-weight:400">(%/an)</span></span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_vacancePct" value="0" step="0.5" min="0" max="100"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Vacance locative <span style="color:var(--mut);font-weight:400">(mois/an)</span></span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_vacanceMois" value="0" step="0.5" min="0" max="12"><span class="champ-suffix">mois</span></div>
+            </label>
           </div>
         </div>
 
@@ -127,8 +141,32 @@
           </div>
         </div>
 
+        <div class="section-bloc">
+          <div class="section-titre">Plus-value fiscale — options</div>
+          <div class="section-grille">
+            <label class="champ"><span class="champ-label">Frais d'acquisition retenus</span>
+              <select class="champ-input mono" id="immo_modeFraisPV">
+                <option value="reel">Réel</option>
+                <option value="forfait">Forfait 7,5 %</option>
+              </select>
+            </label>
+            <label class="champ"><span class="champ-label">Travaux retenus</span>
+              <select class="champ-input mono" id="immo_modeTravauxPV">
+                <option value="reel">Réel</option>
+                <option value="forfait">Forfait 15 %</option>
+              </select>
+            </label>
+            <label class="champ" style="grid-column: 1 / -1;"><span class="champ-label">Barème d'abattement IR</span>
+              <select class="champ-input mono" id="immo_baremePlusValueIR">
+                <option value="actuel">Actuel (22 ans, en vigueur)</option>
+                <option value="reforme17ans">Hypothèse réforme (17 ans, non retenue en LF2026)</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="note-fiscale">
-          Investissement locatif : impôt sur la plus-value au barème français en vigueur (19&nbsp;% IR + 17,2&nbsp;% prélèvements sociaux, abattements pour durée de détention jusqu'à exonération totale à 22&nbsp;ans pour l'IR et 30&nbsp;ans pour les PS, plus surtaxe au-delà de 50&nbsp;000&nbsp;€ de plus-value nette). Le capital restant dû au crédit est automatiquement soldé sur le produit de la vente.
+          Investissement locatif : impôt sur la plus-value au barème en vigueur (19&nbsp;% IR + 17,2&nbsp;% prélèvements sociaux, abattements pour durée de détention jusqu'à exonération totale à 22&nbsp;ans pour l'IR et 30&nbsp;ans pour les PS, plus surtaxe au-delà de 50&nbsp;000&nbsp;€ de plus-value nette). Le capital restant dû au crédit est automatiquement soldé sur le produit de la vente. Le forfait travaux de 15&nbsp;% ne s'applique qu'au-delà de 5 ans de détention (sinon le montant réel est utilisé même si l'option forfait est sélectionnée). Les forfaits et le barème à 17&nbsp;ans sont des options de simulation, à activer selon votre situation ou une évolution future de la loi.
           <div class="detail-fiscal-chiffre" id="detailFiscalImmo"></div>
         </div>
 
@@ -139,7 +177,10 @@
     <div class="panneau" style="--c: var(--action)">
       <div class="panneau-head">
         <span class="panneau-titre">Action</span>
-        <button class="btn-sync" data-target="action" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+        <div class="boutons-head">
+          <button class="btn-sync" data-target="action" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+          <button class="btn-pdf" data-support="action" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
+        </div>
       </div>
       <div class="panneau-corps" id="formAction"></div>
     </div>
@@ -148,7 +189,10 @@
     <div class="panneau" style="--c: var(--obligation)">
       <div class="panneau-head">
         <span class="panneau-titre">Obligation</span>
-        <button class="btn-sync" data-target="obligation" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+        <div class="boutons-head">
+          <button class="btn-sync" data-target="obligation" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+          <button class="btn-pdf" data-support="obligation" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
+        </div>
       </div>
       <div class="panneau-corps" id="formObligation"></div>
     </div>
@@ -157,7 +201,10 @@
     <div class="panneau" style="--c: var(--etf)">
       <div class="panneau-head">
         <span class="panneau-titre">ETF</span>
-        <button class="btn-sync" data-target="etf" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+        <div class="boutons-head">
+          <button class="btn-sync" data-target="etf" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+          <button class="btn-pdf" data-support="etf" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
+        </div>
       </div>
       <div class="panneau-corps" id="formEtf"></div>
     </div>
@@ -166,7 +213,10 @@
     <div class="panneau" style="--c: var(--av)">
       <div class="panneau-head">
         <span class="panneau-titre">Assurance-vie</span>
-        <button class="btn-sync" data-target="av" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+        <div class="boutons-head">
+          <button class="btn-sync" data-target="av" title="Recopie la mise totale immobilière (apport + frais + travaux)">⇄ Synchroniser</button>
+          <button class="btn-pdf" data-support="av" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
+        </div>
       </div>
       <div class="panneau-corps" id="formAv"></div>
     </div>
@@ -174,7 +224,10 @@
   </div>
 
   <!-- RÉSULTATS -->
-  <div class="resultats-titre">Résultats comparatifs</div>
+  <div class="resultats-entete">
+    <div class="resultats-titre">Résultats comparatifs</div>
+    <button class="btn-pdf btn-pdf-global" id="btnExportTout" title="Exporter le détail des 5 supports dans un seul PDF">⬇ Exporter tout en PDF</button>
+  </div>
   <div class="resultats-grille" id="resultatsGrille" aria-label="Résultats comparatifs détaillés"></div>
 
   <div class="graphique-bloc">
@@ -187,7 +240,9 @@
 
 </div>
 
+<script src="pdf-lib.min.js"></script>
 <script src="engine.js"></script>
+<script src="pdf-export.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

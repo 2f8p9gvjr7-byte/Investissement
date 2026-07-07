@@ -46,23 +46,37 @@ function calculerSurtaxePlusValueElevee(plusValueNetteIR) {
   return 0.06 * pv;
 }
 
-// Calcule l'impôt sur la plus-value immobilière (investissement locatif, barème français en vigueur).
-function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention) {
+// Calcule l'impôt sur la plus-value immobilière (investissement locatif, barème en vigueur).
+function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention, bareme = "actuel") {
   if (plusValueBrute <= 0) {
     return { impotIR: 0, impotPS: 0, surtaxe: 0, total: 0, abattementIR: 0, abattementPS: 0 };
   }
 
-  // Abattement IR (19%) : 6%/an de la 6e à la 21e année, exonération totale à 22 ans
+  // Abattement IR (19%) :
+  // - Barème actuel (en vigueur) : 6%/an de la 6e à la 21e année, exonération totale à 22 ans
+  // - Barème "réforme 17 ans" (amendement I-377, adopté en 1re lecture le 03/11/2025 puis écarté du texte
+  //   définitif de la LF2026 — conservé ici en option paramétrable au cas où une loi future le reprendrait) :
+  //   8%/an de la 6e à la 16e année, exonération totale à 17 ans
   let abattementIR = 0;
-  if (dureeDetention >= 22) {
-    abattementIR = 1;
-  } else if (dureeDetention > 5) {
-    const anneesAuDela5 = Math.min(dureeDetention - 5, 16);
-    abattementIR = anneesAuDela5 * 0.06;
+  if (bareme === "reforme17ans") {
+    if (dureeDetention >= 17) {
+      abattementIR = 1;
+    } else if (dureeDetention > 5) {
+      const anneesAuDela5 = Math.min(dureeDetention - 5, 11);
+      abattementIR = anneesAuDela5 * 0.08;
+    }
+  } else {
+    if (dureeDetention >= 22) {
+      abattementIR = 1;
+    } else if (dureeDetention > 5) {
+      const anneesAuDela5 = Math.min(dureeDetention - 5, 16);
+      abattementIR = anneesAuDela5 * 0.06;
+    }
   }
   abattementIR = Math.min(abattementIR, 1);
 
   // Abattement prélèvements sociaux (17,2%) : 1,65%/an de la 6e à la 21e, 1,60% la 22e, 9%/an de la 23e à la 30e
+  // Barème inchangé par la réforme à 17 ans (qui ne touche que l'IR) : toujours 30 ans pour une exonération totale.
   let abattementPS = 0;
   if (dureeDetention >= 30) {
     abattementPS = 1;
@@ -99,6 +113,15 @@ function calculerImmobilier(p, dureeAnalyse) {
     0
   );
 
+  // Frais et travaux retenus pour le calcul de la PLUS-VALUE FISCALE uniquement (majoration du prix
+  // d'acquisition) : au choix, montants réels saisis ou forfaits légaux (7,5 % frais, 15 % travaux si
+  // détention > 5 ans). Ce choix n'affecte ni la mise initiale réelle ni le montant emprunté.
+  const fraisRetenusPourPV = p.modeFraisPV === "forfait" ? p.prixBien * 0.075 : fraisAcquisition;
+  function travauxRetenusPourPV(dureeDetention) {
+    if (p.modeTravauxPV === "forfait" && dureeDetention > 5) return p.prixBien * 0.15;
+    return p.travauxInitiaux;
+  }
+
   const { mensualite, parAn } = tableauAmortissement(montantEmprunte, p.tauxCredit, p.dureeCredit, dureeAnalyse);
 
   const flux = [-miseInitiale];
@@ -109,29 +132,39 @@ function calculerImmobilier(p, dureeAnalyse) {
   const equiteInitiale = p.prixBien - montantEmprunte;
   const courbeValeurNette = [{ an: 0, valeur: -miseInitiale + equiteInitiale }];
 
+  // Taux de vacance : priorité au taux % s'il est non nul, sinon conversion depuis les mois/an
+  const tauxVacance = (p.vacancePct !== undefined && p.vacancePct > 0)
+    ? p.vacancePct / 100
+    : (p.vacanceMois !== undefined ? p.vacanceMois / 12 : 0);
+
   for (let an = 1; an <= dureeAnalyse; an++) {
-    const loyer = p.loyerAnnuelInitial * Math.pow(1 + p.tauxCroissanceLoyer, an - 1);
+    const loyerTheorique = p.loyerAnnuelInitial * Math.pow(1 + p.tauxCroissanceLoyer, an - 1);
+    // Le loyer encaissé tient compte de la vacance (mois non loués) : seul le loyer perçu
+    // entre dans les recettes et la base imposable. Les charges et annuités restent dues en totalité.
+    const loyer = loyerTheorique * (1 - tauxVacance);
     const charges = p.chargesEntretienInitial * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
     const taxe = p.taxeFonciereInitiale * Math.pow(1 + p.tauxCroissanceTaxe, an - 1);
     const dataCredit = parAn[an - 1] || { interetsAnnee: 0, capitalAnnee: 0, capitalRestant: 0 };
-    const mensualiteAnnuelle = dataCredit.interetsAnnee + dataCredit.capitalAnnee;
+    const annuiteCredit = dataCredit.interetsAnnee + dataCredit.capitalAnnee;
 
     const revenuImposable = Math.max(loyer - charges - taxe - dataCredit.interetsAnnee, 0);
     const impot = revenuImposable * p.tauxImpot;
 
-    const cashFlow = loyer - charges - taxe - impot - mensualiteAnnuelle;
+    const cashFlow = loyer - charges - taxe - impot - annuiteCredit;
     flux.push(cashFlow);
     cashFlowCumuleProgressif += cashFlow;
 
-    const valeurBienAn = p.prixBien * Math.pow(1 + p.tauxProgressionValeur, an);
+    // Base de valorisation = prix d'achat + travaux réels (la remise en état fait partie de la valeur
+    // réelle du bien dès l'achat, indépendamment du forfait fiscal éventuellement retenu pour la PV).
+    const valeurBienAn = (p.prixBien + p.travauxInitiaux) * Math.pow(1 + p.tauxProgressionValeur, an);
     const equiteAnBrute = valeurBienAn - dataCredit.capitalRestant;
-    const prixAcquisitionMajoreAn = p.prixBien + fraisAcquisition + p.travauxInitiaux;
+    const prixAcquisitionMajoreAn = p.prixBien + fraisRetenusPourPV + travauxRetenusPourPV(an);
     const plusValueBruteAn = Math.max(valeurBienAn - prixAcquisitionMajoreAn, 0);
-    const fiscaliteAn = calculerImpotPlusValueImmo(plusValueBruteAn, an);
+    const fiscaliteAn = calculerImpotPlusValueImmo(plusValueBruteAn, an, p.baremePlusValueIR);
     const equiteAn = equiteAnBrute - fiscaliteAn.total;
 
     detailAnnuel.push({
-      an, loyer, charges, taxe, impot, mensualiteAnnuelle,
+      an, loyer, charges, taxe, impot, annuiteCredit,
       capitalRestant: dataCredit.capitalRestant, cashFlow, equiteAn
     });
     // Gain net par rapport à la mise, à date t = -mise + cash-flows cumulés + équité actuelle dans le bien
@@ -140,13 +173,13 @@ function calculerImmobilier(p, dureeAnalyse) {
     courbeValeurNette.push({ an, valeur: valeurNetteAn });
   }
 
-  const valeurFutureBien = p.prixBien * Math.pow(1 + p.tauxProgressionValeur, dureeAnalyse);
+  const valeurFutureBien = (p.prixBien + p.travauxInitiaux) * Math.pow(1 + p.tauxProgressionValeur, dureeAnalyse);
   const capitalRestantFinal = parAn[dureeAnalyse - 1]?.capitalRestant || 0;
   const equiteNetteBrute = valeurFutureBien - capitalRestantFinal;
 
-  const prixAcquisitionMajore = p.prixBien + fraisAcquisition + p.travauxInitiaux;
+  const prixAcquisitionMajore = p.prixBien + fraisRetenusPourPV + travauxRetenusPourPV(dureeAnalyse);
   const plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionMajore, 0);
-  const fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse);
+  const fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR);
   const equiteNetteFinale = equiteNetteBrute - fiscalitePV.total;
 
   const fluxAvecSortie = [...flux];
@@ -200,6 +233,7 @@ function calculerTitreFinancier(p, dureeAnalyse) {
 
   return {
     miseInitiale: p.miseInitiale, flux: fluxAvecSortie, detailAnnuel,
+    valeurFutureBrute, plusValue, impotPlusValue,
     valeurFutureNette, cashFlowCumule, valeurFinaleNette,
     gainNet,
     courbeValeurNette
@@ -267,7 +301,34 @@ function calculerAssuranceVie(p, dureeAnalyse) {
   };
 }
 
+// Valeur Actuelle Nette des flux à un taux d'actualisation donné (ex: taux sans risque choisi par l'utilisateur).
+// Complémentaire au TRI : exprime en euros la création de valeur au taux d'exigence retenu,
+// plutôt que de chercher le taux qui annule la VAN (ce qu'est justement le TRI).
+function calculerVAN(flux, tauxActualisation) {
+  let van = 0;
+  for (let t = 0; t < flux.length; t++) {
+    van += flux[t] / Math.pow(1 + tauxActualisation, t);
+  }
+  return van;
+}
+
+// Valeur future = la VAN capitalisée jusqu'à l'horizon (mathématiquement identique à la somme
+// de chaque flux capitalisé individuellement jusqu'à la même date).
+function calculerValeurFutureVAN(van, tauxActualisation, dureeAnalyse) {
+  return van * Math.pow(1 + tauxActualisation, dureeAnalyse);
+}
+
 function calculerTRI(flux, guess = 0.08) {
+  // Cas particulier à 2 flux (un seul investissement, un seul retour) : solution analytique exacte,
+  // Newton-Raphson peut diverger sur un cas aussi dégénéré faute de courbure suffisante.
+  const nonZero = flux.map((v, i) => [i, v]).filter(([, v]) => v !== 0);
+  if (nonZero.length === 2 && nonZero[0][1] < 0 && nonZero[1][1] > 0) {
+    const [t0, v0] = nonZero[0];
+    const [t1, v1] = nonZero[1];
+    const n = t1 - t0;
+    if (n > 0) return Math.pow(v1 / -v0, 1 / n) - 1;
+  }
+
   let taux = guess;
   for (let iter = 0; iter < 200; iter++) {
     let npv = 0;
@@ -279,6 +340,9 @@ function calculerTRI(flux, guess = 0.08) {
     if (Math.abs(dNpv) < 1e-10) break;
     const nouveauTaux = taux - npv / dNpv;
     if (!isFinite(nouveauTaux)) return null;
+    // Garde-fou : un TRI annuel hors de [-99%, +500%] signale une divergence numérique, pas un résultat
+    // économiquement plausible pour ce type de simulation ; on arrête plutôt que de renvoyer une valeur absurde.
+    if (nouveauTaux < -0.99 || nouveauTaux > 5) return null;
     if (Math.abs(nouveauTaux - taux) < 1e-9) return nouveauTaux;
     taux = nouveauTaux;
   }

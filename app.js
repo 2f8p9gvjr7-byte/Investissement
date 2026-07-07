@@ -3,15 +3,18 @@
 // ============================================================
 
 let dureeAnalyse = 15;
+let tauxActualisation = 0.02;
 
 const immo = {
   prixBien: 200000, apport: 40000, fraisAcquisitionPct: 0.08, travauxInitiaux: 5000,
   montantEmprunte: 181000, // par défaut : (prixBien + frais + travaux) - apport, modifiable librement
   loyerAnnuelInitial: 9600, tauxCroissanceLoyer: 0.015,
+  vacancePct: 0, vacanceMois: 0,
   chargesEntretienInitial: 1200, tauxCroissanceCharges: 0.02,
   taxeFonciereInitiale: 900, tauxCroissanceTaxe: 0.02,
   tauxImpot: 0.30, tauxCredit: 0.035, dureeCredit: 20,
   tauxProgressionValeur: 0.02,
+  modeFraisPV: "reel", modeTravauxPV: "reel", baremePlusValueIR: "actuel",
 };
 
 const action = {
@@ -99,6 +102,10 @@ function genererFormulaireTitre(prefix, data, labelRevenu) {
         ${champHtml(`${prefix}_tauxProgressionValeur`, "Progression valeur", (data.tauxProgressionValeur * 100).toFixed(2), "%", 0.1)}
         ${champHtml(`${prefix}_tauxImpotPlusValue`, "Impôt sur plus-value", (data.tauxImpotPlusValue * 100).toFixed(2), "%", 0.1)}
       </div>
+    </div>
+    <div class="note-fiscale">
+      Le "cash-flow cumulé" affiché dans les résultats inclut la mise initiale (en négatif) et les revenus perçus, mais pas la revente. La valeur de revente est calculée séparément ci-dessous.
+      <div class="detail-fiscal-chiffre" id="detailFiscal${prefix.charAt(0).toUpperCase() + prefix.slice(1)}"></div>
     </div>`;
 }
 
@@ -149,6 +156,13 @@ function lierFormulaire(prefix, data) {
   Object.keys(data).forEach((key) => {
     const el = document.getElementById(`${prefix}_${key}`);
     if (!el) return;
+    if (el.tagName === "SELECT") {
+      el.addEventListener("change", () => {
+        data[key] = el.value;
+        recalculer();
+      });
+      return;
+    }
     el.addEventListener("input", () => {
       const brut = parseFloat(el.value);
       const val = isNaN(brut) ? 0 : brut;
@@ -170,6 +184,12 @@ document.getElementById("dureeAnalyse").addEventListener("input", (e) => {
   recalculer();
 });
 
+document.getElementById("tauxActualisation").addEventListener("input", (e) => {
+  tauxActualisation = parseFloat(e.target.value) / 100;
+  document.getElementById("tauxActualisationVal").textContent = `${parseFloat(e.target.value).toFixed(1).replace(".", ",")} %`;
+  recalculer();
+});
+
 // ============================================================
 // BOUTON "SYNCHRONISER" — recopie la mise totale immobilière
 // ============================================================
@@ -187,6 +207,22 @@ function recalculerMontantEmprunteAuto() {
 }
 
 document.getElementById("btnRecalcEmprunt").addEventListener("click", recalculerMontantEmprunteAuto);
+
+// Synchronisation bidirectionnelle vacance (% ↔ mois) : modifier l'un met à jour l'autre
+document.getElementById("immo_vacancePct").addEventListener("input", (e) => {
+  const pct = parseFloat(e.target.value) || 0;
+  immo.vacancePct = pct;
+  immo.vacanceMois = 0; // priorité au %, on efface les mois
+  document.getElementById("immo_vacanceMois").value = (pct / 100 * 12).toFixed(2);
+  recalculer();
+});
+document.getElementById("immo_vacanceMois").addEventListener("input", (e) => {
+  const mois = parseFloat(e.target.value) || 0;
+  immo.vacanceMois = mois;
+  immo.vacancePct = 0; // priorité aux mois, on efface le %
+  document.getElementById("immo_vacancePct").value = (mois / 12 * 100).toFixed(2);
+  recalculer();
+});
 
 function synchroniserMise(cible) {
   const montant = Math.round(miseTotaleImmobiliere());
@@ -233,9 +269,13 @@ function carteResultatHtml(cle, r) {
       <div class="resultat-tri-label">TRI annuel</div>
       <div class="resultat-grille">
         <div><div class="resultat-val">${fmtEUR(r.valeurFinaleNette)}</div><div class="resultat-sub">Valeur finale nette</div></div>
-        <div><div class="resultat-val">${fmtEUR(r.cashFlowCumule)}</div><div class="resultat-sub">Cash-flow cumulé</div></div>
+        <div><div class="resultat-val">${fmtEUR(r.cashFlowCumule)}</div><div class="resultat-sub">Cash-flow cumulé (mise comprise)</div></div>
         <div><div class="resultat-val">${multiple !== null ? multiple.toFixed(2) + "x" : "—"}</div><div class="resultat-sub">Multiple sur mise</div></div>
         <div><div class="resultat-val">${fmtEUR(r.miseInitiale)}</div><div class="resultat-sub">Mise initiale</div></div>
+      </div>
+      <div class="resultat-grille resultat-grille-van">
+        <div><div class="resultat-val resultat-val-van">${fmtEUR(r.van)}</div><div class="resultat-sub">VAN au taux choisi</div></div>
+        <div><div class="resultat-val resultat-val-van">${fmtEUR(r.valeurFutureVAN)}</div><div class="resultat-sub">Valeur future (VAN capitalisée)</div></div>
       </div>
     </div>`;
 }
@@ -363,9 +403,23 @@ function rendreDetailFiscalAv(r) {
   document.getElementById("detailFiscalAv").innerHTML = html;
 }
 
+function rendreDetailFiscalTitre(prefix, r) {
+  const id = `detailFiscal${prefix.charAt(0).toUpperCase() + prefix.slice(1)}`;
+  const el = document.getElementById(id);
+  if (!el) return;
+  const html = `
+    <span>Valeur de revente brute estimée : <strong>${fmtEUR(r.valeurFutureBrute)}</strong></span>
+    <span>Plus-value brute : ${fmtEUR(r.plusValue)}</span>
+    <span>Impôt sur la plus-value : ${fmtEUR(r.impotPlusValue)}</span>
+    <span class="detail-fiscal-total">Valeur de revente nette d'impôt : <strong>${fmtEUR(r.valeurFutureNette)}</strong></span>`;
+  el.innerHTML = html;
+}
+
 // ============================================================
 // BOUCLE DE RECALCUL PRINCIPALE
 // ============================================================
+
+let derniersResultats = null;
 
 function recalculer() {
   const rImmo = calculerImmobilier(immo, dureeAnalyse);
@@ -374,13 +428,20 @@ function recalculer() {
   const rEtf = calculerTitreFinancier(etf, dureeAnalyse);
   const rAv = calculerAssuranceVie(av, dureeAnalyse);
 
+  function avecVAN(r) {
+    const van = calculerVAN(r.flux, tauxActualisation);
+    const valeurFutureVAN = calculerValeurFutureVAN(van, tauxActualisation, dureeAnalyse);
+    return { ...r, tri: calculerTRI(r.flux), van, valeurFutureVAN };
+  }
+
   const resultats = {
-    immobilier: { ...rImmo, tri: calculerTRI(rImmo.flux) },
-    action: { ...rAction, tri: calculerTRI(rAction.flux) },
-    obligation: { ...rObligation, tri: calculerTRI(rObligation.flux) },
-    etf: { ...rEtf, tri: calculerTRI(rEtf.flux) },
-    av: { ...rAv, tri: calculerTRI(rAv.flux) },
+    immobilier: avecVAN(rImmo),
+    action: avecVAN(rAction),
+    obligation: avecVAN(rObligation),
+    etf: avecVAN(rEtf),
+    av: avecVAN(rAv),
   };
+  derniersResultats = resultats;
 
   rendreTriBar(resultats);
 
@@ -392,9 +453,79 @@ function recalculer() {
     carteResultatHtml("av", resultats.av);
 
   rendreDetailFiscalImmo(resultats.immobilier);
+  rendreDetailFiscalTitre("action", resultats.action);
+  rendreDetailFiscalTitre("obligation", resultats.obligation);
+  rendreDetailFiscalTitre("etf", resultats.etf);
   rendreDetailFiscalAv(resultats.av);
   dessinerGraphique(resultats);
 }
+
+// ============================================================
+// EXPORT PDF
+// ============================================================
+
+function nomFichierPdf(support) {
+  const date = new Date().toISOString().slice(0, 10);
+  return `comparateur-${support}-${date}.pdf`;
+}
+
+async function gererClicExportPdf(btn) {
+  const support = btn.dataset.support;
+  if (!derniersResultats) return;
+  const texteOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "… génération";
+  try {
+    let bytes;
+    if (support === "immobilier") {
+      bytes = await exporterPdfImmobilier(immo, derniersResultats.immobilier, dureeAnalyse);
+    } else if (support === "action") {
+      bytes = await exporterPdfTitre("Action", PDF_COULEURS.action, action, derniersResultats.action, dureeAnalyse, "Dividende");
+    } else if (support === "obligation") {
+      bytes = await exporterPdfTitre("Obligation", PDF_COULEURS.obligation, obligation, derniersResultats.obligation, dureeAnalyse, "Coupon");
+    } else if (support === "etf") {
+      bytes = await exporterPdfTitre("ETF", PDF_COULEURS.etf, etf, derniersResultats.etf, dureeAnalyse, "Distribution");
+    } else if (support === "av") {
+      bytes = await exporterPdfAv(av, derniersResultats.av, dureeAnalyse);
+    }
+    telechargerPdf(bytes, nomFichierPdf(support));
+  } catch (e) {
+    console.error("Erreur export PDF:", e);
+    alert("La génération du PDF a échoué. Réessaie, ou signale le problème si ça persiste.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = texteOriginal;
+  }
+}
+
+document.querySelectorAll(".btn-pdf:not(.btn-pdf-global)").forEach((btn) => {
+  btn.addEventListener("click", () => gererClicExportPdf(btn));
+});
+
+document.getElementById("btnExportTout").addEventListener("click", async () => {
+  const btn = document.getElementById("btnExportTout");
+  if (!derniersResultats) return;
+  const texteOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "⬇ Génération en cours…";
+  try {
+    const donnees = {
+      immo: { params: immo, resultat: derniersResultats.immobilier },
+      action: { params: action, resultat: derniersResultats.action },
+      obligation: { params: obligation, resultat: derniersResultats.obligation },
+      etf: { params: etf, resultat: derniersResultats.etf },
+      av: { params: av, resultat: derniersResultats.av },
+    };
+    const bytes = await exporterPdfGlobal(donnees, dureeAnalyse, tauxActualisation);
+    telechargerPdf(bytes, nomFichierPdf("synthese-globale"));
+  } catch (e) {
+    console.error("Erreur export PDF global:", e);
+    alert("La génération du PDF a échoué. Réessaie, ou signale le problème si ça persiste.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = texteOriginal;
+  }
+});
 
 // ============================================================
 // INITIALISATION

@@ -1,8 +1,10 @@
-const CACHE_NAME = "comparateur-rendements-v2";
+const CACHE_NAME = "comparateur-rendements-v3";
 const ASSETS = [
   "./index.html",
   "./style.css",
   "./engine.js",
+  "./pdf-export.js",
+  "./pdf-lib.min.js",
   "./app.js",
   "./manifest.json",
   "./icon-192.png",
