@@ -50,7 +50,11 @@ html, body {
   flex: 1; min-width: 92px;
   background: var(--pan2); border: 1px solid var(--bor); border-top: 3px solid var(--c);
   border-radius: 5px; padding: 7px 10px; text-align: center;
+  cursor: pointer; transition: background 0.15s, transform 0.1s;
+  user-select: none;
 }
+.tri-pastille:hover { background: color-mix(in srgb, var(--c) 12%, var(--pan2)); }
+.tri-pastille:active { transform: scale(0.97); }
 .tri-pastille .nom { font-size: 9.5px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--c); }
 .tri-pastille .val { font-size: 16px; font-weight: 900; color: var(--txt); margin-top: 2px; }
 

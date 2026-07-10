@@ -249,11 +249,23 @@ function rendreTriBar(resultats) {
   const ordre = ["immobilier", "action", "obligation", "etf", "av"];
   document.getElementById("triBar").innerHTML = ordre
     .map((k) => `
-      <div class="tri-pastille" style="--c:${COULEURS[k]}">
+      <div class="tri-pastille" style="--c:${COULEURS[k]}" role="button" tabindex="0"
+           title="Aller au panneau ${NOMS[k]}" data-cible="panneau-${k}"
+           onclick="scrollVersPanneau('panneau-${k}')"
+           onkeydown="if(event.key==='Enter')scrollVersPanneau('panneau-${k}')">
         <div class="nom">${NOMS[k]}</div>
         <div class="val">${fmtPct(resultats[k].tri)}</div>
       </div>`)
     .join("");
+}
+
+function scrollVersPanneau(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const header = document.getElementById("header");
+  const offsetHeader = header ? header.offsetHeight : 0;
+  const top = el.getBoundingClientRect().top + window.scrollY - offsetHeader - 12;
+  window.scrollTo({ top, behavior: "smooth" });
 }
 
 // ============================================================
