@@ -225,7 +225,10 @@ document.getElementById("immo_vacanceMois").addEventListener("input", (e) => {
 });
 
 function synchroniserMise(cible) {
-  const montant = Math.round(miseTotaleImmobiliere());
+  // L'apport seul représente le capital que tu aurais pu placer ailleurs —
+  // les frais et travaux sont des coûts incontournables de l'opération immobilière,
+  // pas du capital libre. La vraie comparaison est donc apport vs placement alternatif.
+  const montant = Math.round(immo.apport);
   if (cible === "av") {
     av.versementInitial = montant;
     document.getElementById("av_versementInitial").value = montant;
