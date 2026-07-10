@@ -204,3 +204,32 @@ select.champ-input option {
 
 input:focus-visible, button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ===== NOTIFICATION DE MISE À JOUR ===== */
+#notif-maj {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 9999;
+  background: var(--pan2); border: 1px solid var(--amber);
+  border-left: 4px solid var(--amber);
+  border-radius: 8px; padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  max-width: 90vw; font-size: 13px; color: var(--txt);
+  animation: notif-entree 0.3s ease;
+}
+@keyframes notif-entree {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.notif-maj-icone { font-size: 18px; flex-shrink: 0; }
+.notif-maj-texte strong { color: var(--amber); }
+.notif-maj-btn {
+  background: var(--amber); color: var(--encre, #0f1d35);
+  border: none; border-radius: 5px; padding: 5px 12px;
+  font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+.notif-maj-fermer {
+  background: transparent; border: none; color: var(--mut);
+  cursor: pointer; font-size: 14px; padding: 2px 4px; flex-shrink: 0;
+}
+.notif-maj-fermer:hover { color: var(--txt); }
