@@ -551,63 +551,7 @@ document.getElementById("btnExportTout").addEventListener("click", async () => {
 
 recalculer();
 
-// ============================================================
-// MISE À JOUR AUTOMATIQUE — notification + rechargement
-// ============================================================
-
-function afficherNotifMaj() {
-  // Évite d'afficher deux fois si déjà visible
-  if (document.getElementById("notif-maj")) return;
-
-  const notif = document.createElement("div");
-  notif.id = "notif-maj";
-  notif.innerHTML = `
-    <span class="notif-maj-icone">🔄</span>
-    <span class="notif-maj-texte">Nouvelle version disponible — rechargement dans <strong id="notif-compte">5</strong> s</span>
-    <button class="notif-maj-btn" onclick="window.location.reload()">Maintenant</button>
-    <button class="notif-maj-fermer" onclick="this.parentElement.remove()" title="Ignorer">✕</button>
-  `;
-  document.body.appendChild(notif);
-
-  let secondes = 5;
-  const timer = setInterval(() => {
-    secondes--;
-    const el = document.getElementById("notif-compte");
-    if (el) el.textContent = secondes;
-    if (secondes <= 0) {
-      clearInterval(timer);
-      window.location.reload();
-    }
-  }, 1000);
-}
-
-let dejaRechargé = false;
-
+// Enregistrement du service worker (se désinstalle proprement pour vider les anciens caches)
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js")
-      .then((registration) => {
-        // Vérifie les mises à jour toutes les 60 secondes
-        setInterval(() => registration.update(), 60000);
-
-        registration.addEventListener("updatefound", () => {
-          const nouveauSW = registration.installing;
-          if (!nouveauSW) return;
-
-          nouveauSW.addEventListener("statechange", () => {
-            if (nouveauSW.state === "installed" && navigator.serviceWorker.controller) {
-              afficherNotifMaj();
-            }
-          });
-        });
-      })
-      .catch(() => {});
-
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (!dejaRechargé) {
-        dejaRechargé = true;
-        window.location.reload();
-      }
-    });
-  });
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
