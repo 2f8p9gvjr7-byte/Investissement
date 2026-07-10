@@ -168,6 +168,10 @@ function calculerImmobilier(p, dureeAnalyse) {
     // réelle du bien dès l'achat, indépendamment du forfait fiscal éventuellement retenu pour la PV).
     const valeurBienAn = (p.prixBien + p.travauxInitiaux) * Math.pow(1 + p.tauxProgressionValeur, an);
     const equiteAnBrute = valeurBienAn - dataCredit.capitalRestant;
+    // PV fiscale : valeur de cession (marché réel) - prix d'acquisition majoré (frais+travaux retenus)
+    // Les travaux peuvent apparaître avec des montants différents dans les deux termes :
+    // dans la cession, ils ont valorisé le bien au taux du marché ;
+    // dans le prix majoré, on retient le plus avantageux entre réel et forfait fiscal.
     const prixAcquisitionMajoreAn = p.prixBien + fraisRetenusPourPV + travauxRetenusPourPV(an);
     const plusValueBruteAn = Math.max(valeurBienAn - prixAcquisitionMajoreAn, 0);
     const fiscaliteAn = calculerImpotPlusValueImmo(plusValueBruteAn, an, p.baremePlusValueIR);
