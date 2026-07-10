@@ -1,9 +1,0 @@
-{
-  "name": "comparateur-rendements",
-  "version": "1.0.0",
-  "description": "Comparateur de rendements immobilier vs marchés financiers",
-  "scripts": {
-    "build": "node build.js",
-    "vercel-build": "node build.js"
-  }
-}
