@@ -1,4 +1,4 @@
-const CACHE_NAME = "comparateur-rendements-1783706199581";
+const CACHE_NAME = "comparateur-rendements-1783708774253";
 const ASSETS = [
   "./index.html",
   "./style.css",

@@ -14,22 +14,25 @@ const immo = {
   taxeFonciereInitiale: 900, tauxCroissanceTaxe: 0.02,
   tauxImpot: 0.30, tauxCredit: 0.035, dureeCredit: 20,
   tauxProgressionValeur: 0.02,
-  modeFraisPV: "reel", modeTravauxPV: "reel", baremePlusValueIR: "actuel",
+  modeFraisPV: "auto", modeTravauxPV: "auto", baremePlusValueIR: "actuel",
 };
 
+// Taux PFU 2026 : 31,4 % (12,8 % IR + 18,6 % PS suite à la hausse de la CSG votée en LFSS 2026)
+// La hausse de 17,2% à 18,6% s'applique aux dividendes, plus-values mobilières et revenus financiers.
+// Les plus-values IMMOBILIÈRES restent à 17,2% (exception légale explicite dans la LFSS 2026).
 const action = {
   miseInitiale: 61000, rendementAnnuelInitial: 0.025, tauxCroissanceRendement: 0.02,
-  tauxImpotRevenu: 0.30, tauxProgressionValeur: 0.06, tauxImpotPlusValue: 0.30,
+  tauxImpotRevenu: 0.314, tauxProgressionValeur: 0.06, tauxImpotPlusValue: 0.314,
 };
 
 const obligation = {
   miseInitiale: 61000, rendementAnnuelInitial: 0.035, tauxCroissanceRendement: 0,
-  tauxImpotRevenu: 0.30, tauxProgressionValeur: 0, tauxImpotPlusValue: 0.30,
+  tauxImpotRevenu: 0.314, tauxProgressionValeur: 0, tauxImpotPlusValue: 0.314,
 };
 
 const etf = {
   miseInitiale: 61000, rendementAnnuelInitial: 0.018, tauxCroissanceRendement: 0.01,
-  tauxImpotRevenu: 0.30, tauxProgressionValeur: 0.05, tauxImpotPlusValue: 0.30,
+  tauxImpotRevenu: 0.314, tauxProgressionValeur: 0.05, tauxImpotPlusValue: 0.314,
 };
 
 const av = {
@@ -131,7 +134,7 @@ function genererFormulaireAv(data) {
       </div>
     </div>
     <div class="note-fiscale">
-      Rachat total simulé à la durée choisie. Avant 8 ans : 30&nbsp;% (12,8&nbsp;% IR + 17,2&nbsp;% PS) sans abattement. Après 8 ans : abattement annuel sur les gains (4&nbsp;600&nbsp;€ pour une personne seule, 9&nbsp;200&nbsp;€ pour un couple), puis 7,5&nbsp;% IR + 17,2&nbsp;% PS (les PS s'appliquent toujours sur la totalité des gains, sans abattement).
+      Rachat total simulé à la durée choisie. Avant 8 ans : 31,4&nbsp;% PFU (12,8&nbsp;% IR + 18,6&nbsp;% PS) sans abattement. Après 8 ans : abattement annuel sur les gains (4&nbsp;600&nbsp;€ pour une personne seule, 9&nbsp;200&nbsp;€ pour un couple), puis 7,5&nbsp;% IR + 18,6&nbsp;% PS (les PS s'appliquent toujours sur la totalité des gains, sans abattement). Taux PS 2026 selon LFSS 2026 (loi n° 2025-1403).
       <div class="detail-fiscal-chiffre" id="detailFiscalAv"></div>
     </div>`;
 }

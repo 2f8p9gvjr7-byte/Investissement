@@ -113,13 +113,23 @@ function calculerImmobilier(p, dureeAnalyse) {
     0
   );
 
-  // Frais et travaux retenus pour le calcul de la PLUS-VALUE FISCALE uniquement (majoration du prix
-  // d'acquisition) : au choix, montants réels saisis ou forfaits légaux (7,5 % frais, 15 % travaux si
-  // détention > 5 ans). Ce choix n'affecte ni la mise initiale réelle ni le montant emprunté.
-  const fraisRetenusPourPV = p.modeFraisPV === "forfait" ? p.prixBien * 0.075 : fraisAcquisition;
+  // Frais et travaux retenus pour le calcul de la PLUS-VALUE FISCALE uniquement.
+  // Si le mode est "auto" (par défaut) ou non spécifié, on calcule les deux options
+  // et on retient la plus avantageuse (celle qui minimise la plus-value imposable,
+  // donc qui maximise le montant retenu en majoration du prix d'acquisition).
+  // Le forfait travaux 15% n'est valable qu'au-delà de 5 ans de détention.
+  const forfaitFrais = p.prixBien * 0.075;
+  const fraisReels = fraisAcquisition;
+  const fraisRetenusPourPV = p.modeFraisPV === "forfait" ? forfaitFrais
+    : p.modeFraisPV === "reel" ? fraisReels
+    : Math.max(forfaitFrais, fraisReels); // "auto" : le plus avantageux
+
   function travauxRetenusPourPV(dureeDetention) {
-    if (p.modeTravauxPV === "forfait" && dureeDetention > 5) return p.prixBien * 0.15;
-    return p.travauxInitiaux;
+    const forfaitTravaux = dureeDetention > 5 ? p.prixBien * 0.15 : 0;
+    const travauxReels = p.travauxInitiaux;
+    if (p.modeTravauxPV === "forfait") return dureeDetention > 5 ? forfaitTravaux : travauxReels;
+    if (p.modeTravauxPV === "reel") return travauxReels;
+    return Math.max(forfaitTravaux, travauxReels); // "auto" : le plus avantageux
   }
 
   const { mensualite, parAn } = tableauAmortissement(montantEmprunte, p.tauxCredit, p.dureeCredit, dureeAnalyse);
@@ -242,12 +252,13 @@ function calculerTitreFinancier(p, dureeAnalyse) {
 
 // Calcule l'impôt de sortie sur les gains d'une assurance-vie (rachat total en une fois),
 // selon le régime des versements post-27/09/2017.
-// Avant 8 ans : PFU 30 % (12,8 % IR + 17,2 % PS), sans abattement.
-// Après 8 ans : 7,5 % IR (au-delà d'un abattement annuel) + 17,2 % PS sur la totalité des gains (pas d'abattement sur les PS).
+// Taux 2026 suite à la hausse de la CSG (LFSS 2026, loi n° 2025-1403 du 30/12/2025) :
+// Avant 8 ans : PFU 31,4 % (12,8 % IR + 18,6 % PS), sans abattement.
+// Après 8 ans : 7,5 % IR (au-delà d'un abattement annuel) + 18,6 % PS sur la totalité des gains.
 function calculerImpotAssuranceVie(gains, dureeDetention, abattement) {
   if (gains <= 0) return { impot: 0, abattementApplique: 0, impotIR: 0, impotPS: 0 };
 
-  const impotPS = gains * 0.172; // prélèvements sociaux : toujours sur la totalité, jamais d'abattement
+  const impotPS = gains * 0.186; // PS 2026 : 18,6% (hausse de 1,4 pt vs 17,2% jusqu'en 2025)
 
   if (dureeDetention < 8) {
     const impotIR = gains * 0.128;

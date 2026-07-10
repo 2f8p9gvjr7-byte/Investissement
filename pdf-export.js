@@ -119,8 +119,14 @@ function dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat) {
   y -= 6;
 
   y = dessinerSectionTitre(page, fonts, 48, y, "Fiscalité de sortie — plus-value immobilière", PDF_COULEURS.immobilier, largeur);
-  dessinerLigneCleVal(page, fonts, 48, y, "Frais d'acquisition retenus", params.modeFraisPV === "forfait" ? "Forfait 7,5 % du prix" : "Montant réel"); y -= 14;
-  dessinerLigneCleVal(page, fonts, 48, y, "Travaux retenus", params.modeTravauxPV === "forfait" ? "Forfait 15 % du prix" : "Montant réel"); y -= 14;
+  const libelleFrais = params.modeFraisPV === "forfait" ? "Forfait 7,5 % du prix"
+    : params.modeFraisPV === "reel" ? "Montant réel"
+    : "Auto — le plus avantageux entre réel et forfait 7,5 %";
+  const libelleTraux = params.modeTravauxPV === "forfait" ? "Forfait 15 % du prix"
+    : params.modeTravauxPV === "reel" ? "Montant réel"
+    : "Auto — le plus avantageux entre réel et forfait 15 %";
+  dessinerLigneCleVal(page, fonts, 48, y, "Frais d'acquisition retenus", libelleFrais); y -= 14;
+  dessinerLigneCleVal(page, fonts, 48, y, "Travaux retenus", libelleTraux); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Plus-value brute estimée", fmtEURPdf(resultat.plusValueBrute)); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Impôt IR (abattement " + fmtPctPdf(resultat.fiscalitePV.abattementIR) + ")", fmtEURPdf(resultat.fiscalitePV.impotIR)); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Prélèvements sociaux (abattement " + fmtPctPdf(resultat.fiscalitePV.abattementPS) + ")", fmtEURPdf(resultat.fiscalitePV.impotPS)); y -= 14;
@@ -207,8 +213,8 @@ function dessinerResumeAv(pdfDoc, fonts, dureeAnalyse, params, resultat) {
   dessinerLigneCleVal(page, fonts, 48, y, "Total impôt à la sortie", fmtEURPdf(resultat.impotFinal)); y -= 20;
 
   const regimeTexte = dureeAnalyse < 8
-    ? "Sortie avant 8 ans : régime du PFU, 12,8 % IR + 17,2 % PS, sans abattement."
-    : "Sortie après 8 ans : abattement annuel sur les gains, puis 7,5 % IR + 17,2 % PS (les PS s'appliquent toujours sur la totalité des gains).";
+    ? "Sortie avant 8 ans : PFU 31,4 % (12,8 % IR + 18,6 % PS), sans abattement. Taux PS 2026 (LFSS 2026)."
+    : "Sortie après 8 ans : abattement annuel sur les gains, puis 7,5 % IR + 18,6 % PS (les PS s'appliquent toujours sur la totalité des gains). Taux PS 2026 (LFSS 2026).";
   page.drawText(regimeTexte, { x: 48, y, size: 8, font: fonts.regular, color: rgb(...PDF_COULEURS.sousTexte) });
 
   dessinerPiedDePage(page, fonts, largeur);
