@@ -1,5 +1,4 @@
-// VERSION_TIMESTAMP est remplacé automatiquement par build.js à chaque déploiement
-const CACHE_NAME = "comparateur-rendements-1783678764310";
+const CACHE_NAME = "comparateur-rendements-1783680280736";
 const ASSETS = [
   "./index.html",
   "./style.css",
