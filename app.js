@@ -551,7 +551,20 @@ document.getElementById("btnExportTout").addEventListener("click", async () => {
 
 recalculer();
 
-// Enregistrement du service worker (se désinstalle proprement pour vider les anciens caches)
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch(() => {});
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            if (confirm('Nouvelle version disponible. Recharger ?')) {
+              sw.postMessage('SKIP_WAITING');
+              window.location.reload();
+            }
+          }
+        });
+      });
+    }).catch(() => {});
+  });
 }
