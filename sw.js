@@ -18,22 +18,6 @@ self.addEventListener('message', e => {
 });
 
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-  const fichier = url.pathname.split('/').pop();
-  // Fichiers JS et CSS : réseau d'abord (toujours la version la plus récente)
-  if (fichier.endsWith('.js') || fichier.endsWith('.css')) {
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if (res && res.status === 200) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => caches.match(e.request))
-    );
-    return;
-  }
-  // Autres fichiers (icônes, manifest) : cache d'abord
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fetchPromise = fetch(e.request).then(res => {

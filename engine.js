@@ -47,7 +47,7 @@ function calculerSurtaxePlusValueElevee(plusValueNetteIR) {
 }
 
 // Calcule l'impôt sur la plus-value immobilière (investissement locatif, barème en vigueur).
-function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention, bareme = "actuel") {
+function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention, bareme = "actuel", tauxIR = 0.19, tauxPS = 0.172) {
   if (plusValueBrute <= 0) {
     return { impotIR: 0, impotPS: 0, surtaxe: 0, total: 0, abattementIR: 0, abattementPS: 0 };
   }
@@ -93,8 +93,8 @@ function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention, bareme = "ac
   const baseIR = plusValueBrute * (1 - abattementIR);
   const basePS = plusValueBrute * (1 - abattementPS);
 
-  const impotIR = baseIR * 0.19;
-  const impotPS = basePS * 0.172;
+  const impotIR = baseIR * tauxIR;
+  const impotPS = basePS * tauxPS;
   const surtaxe = calculerSurtaxePlusValueElevee(baseIR);
 
   return { impotIR, impotPS, surtaxe, total: impotIR + impotPS + surtaxe, abattementIR, abattementPS };
@@ -157,9 +157,21 @@ function calculerImmobilier(p, dureeAnalyse) {
     const dataCredit = parAn[an - 1] || { interetsAnnee: 0, capitalAnnee: 0, capitalRestant: 0 };
     const annuiteCredit = dataCredit.interetsAnnee + dataCredit.capitalAnnee;
 
-    const revenuImposable = Math.max(loyer - charges - taxe - dataCredit.interetsAnnee, 0);
-    const impot = revenuImposable * p.tauxImpot;
+    let revenuImposable, impot;
+    if (p.regimeFiscal === "lmnp-microbic") {
+      // LMNP Micro-BIC : abattement forfaitaire 50%, charges NON déductibles
+      // Taux d'imposition = TMI personnel + PS paramétrable
+      const abattement = 0.50;
+      revenuImposable = loyer * (1 - abattement);
+      const tauxPS = p.tauxPSlmnp !== undefined ? p.tauxPSlmnp : 0.186;
+      impot = revenuImposable * (p.tauxImpot + tauxPS);
+    } else {
+      // Location nue : charges et intérêts déductibles, taux global saisi par l'utilisateur
+      revenuImposable = Math.max(loyer - charges - taxe - dataCredit.interetsAnnee, 0);
+      impot = revenuImposable * p.tauxImpot;
+    }
 
+    // En LMNP, les charges restent dues même si non déductibles fiscalement
     const cashFlow = loyer - charges - taxe - impot - annuiteCredit;
     flux.push(cashFlow);
     cashFlowCumuleProgressif += cashFlow;
@@ -174,7 +186,7 @@ function calculerImmobilier(p, dureeAnalyse) {
     // dans le prix majoré, on retient le plus avantageux entre réel et forfait fiscal.
     const prixAcquisitionMajoreAn = p.prixBien + fraisRetenusPourPV + travauxRetenusPourPV(an);
     const plusValueBruteAn = Math.max(valeurBienAn - prixAcquisitionMajoreAn, 0);
-    const fiscaliteAn = calculerImpotPlusValueImmo(plusValueBruteAn, an, p.baremePlusValueIR);
+    const fiscaliteAn = calculerImpotPlusValueImmo(plusValueBruteAn, an, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
     const equiteAn = equiteAnBrute - fiscaliteAn.total;
 
     detailAnnuel.push({
@@ -193,7 +205,7 @@ function calculerImmobilier(p, dureeAnalyse) {
 
   const prixAcquisitionMajore = p.prixBien + fraisRetenusPourPV + travauxRetenusPourPV(dureeAnalyse);
   const plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionMajore, 0);
-  const fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR);
+  const fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
   const equiteNetteFinale = equiteNetteBrute - fiscalitePV.total;
 
   const fluxAvecSortie = [...flux];

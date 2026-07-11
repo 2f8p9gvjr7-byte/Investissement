@@ -14,7 +14,11 @@ const immo = {
   taxeFonciereInitiale: 900, tauxCroissanceTaxe: 0.02,
   tauxImpot: 0.30, tauxCredit: 0.035, dureeCredit: 20,
   tauxProgressionValeur: 0.02,
+  regimeFiscal: "nu",
+  tauxPSnue: 0.172,   // PS location nue (revenus fonciers) — 17,2% en vigueur
+  tauxPSlmnp: 0.186,  // PS LMNP Micro-BIC — 18,6% depuis LFSS 2026
   modeFraisPV: "auto", modeTravauxPV: "auto", baremePlusValueIR: "actuel",
+  tauxIRplusvalue: 0.19, tauxPSplusvalue: 0.172,
 };
 
 // Taux PFU 2026 : 31,4 % (12,8 % IR + 18,6 % PS suite à la hausse de la CSG votée en LFSS 2026)
@@ -153,6 +157,8 @@ const PCT_FIELDS = new Set([
   "tauxImpot", "tauxCredit", "tauxProgressionValeur",
   "rendementAnnuelInitial", "tauxCroissanceRendement", "tauxImpotRevenu", "tauxImpotPlusValue",
   "rendementAnnuelBrut", "fraisGestionAnnuels",
+  "tauxIRplusvalue", "tauxPSplusvalue",
+  "tauxPSnue", "tauxPSlmnp",
 ]);
 
 function lierFormulaire(prefix, data) {
@@ -208,6 +214,30 @@ function recalculerMontantEmprunteAuto() {
   document.getElementById("immo_montantEmprunte").value = montant;
   recalculer();
 }
+
+function mettreAjourRegimeFiscal() {
+  const lmnp = immo.regimeFiscal === "lmnp-microbic";
+  const labelImpot = document.querySelector("label[for='immo_tauxImpot'] .champ-label, #immo_tauxImpot")
+    ?.closest("label")?.querySelector(".champ-label");
+  if (labelImpot) {
+    labelImpot.textContent = lmnp ? "Taux marginal d'IR (TMI)" : "Taux d'impôt (loyers)";
+  }
+  const noteRegime = document.getElementById("note-regime");
+  if (noteRegime) {
+    noteRegime.innerHTML = lmnp
+      ? `LMNP Micro-BIC : abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement. Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS (modifiable ci-dessus). Seuil 2026&nbsp;: 83&nbsp;600&nbsp;€ de recettes annuelles.`
+      : `Location nue&nbsp;: charges réelles déductibles (entretien, taxe foncière, intérêts d'emprunt). Saisissez votre taux global IR&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS (modifiable ci-dessus) dans le champ "Taux d'impôt".`;
+  }
+}
+
+document.getElementById("immo_regimeFiscal").addEventListener("change", (e) => {
+  immo.regimeFiscal = e.target.value;
+  mettreAjourRegimeFiscal();
+  recalculer();
+});
+
+// Initialiser les libellés au chargement
+mettreAjourRegimeFiscal();
 
 document.getElementById("btnRecalcEmprunt").addEventListener("click", recalculerMontantEmprunteAuto);
 
