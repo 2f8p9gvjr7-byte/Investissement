@@ -1,4 +1,4 @@
-const CACHE = 'comparateur-v1783877450878';
+const CACHE = 'comparateur-v1783880490721';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

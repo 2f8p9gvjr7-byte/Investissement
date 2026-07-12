@@ -19,7 +19,7 @@ const immo = {
   // Paramètres LMNP Réel
   quotepartTerrain: 0.15, montantMobilier: 5000,
   dureAmortBien: 30, dureAmortTravaux: 12, dureAmortMobilier: 7,
-  assurancePno: 150, cfe: 200, fraisComptable: 400,
+  assurancePno: 0, cfe: 200, fraisComptable: 400,
   modeFraisPV: "auto", modeTravauxPV: "auto", baremePlusValueIR: "actuel",
   tauxIRplusvalue: 0.19, tauxPSplusvalue: 0.172,
 };
