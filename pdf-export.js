@@ -94,6 +94,11 @@ function dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat) {
   dessinerLigneCleVal(page, fonts, 48, y, "Mensualité", fmtEURPdf(resultat.mensualite)); y -= 20;
 
   y = dessinerSectionTitre(page, fonts, 48, y, "Hypothèses — Revenus, charges, valeur terminale", PDF_COULEURS.immobilier, largeur);
+  // Régime fiscal
+  const regimeLabel = params.regimeFiscal === "lmnp-reel" ? "LMNP Réel (amortissements + charges)"
+    : params.regimeFiscal === "lmnp-microbic" ? "LMNP Micro-BIC (abattement 50 %)"
+    : "Location nue (revenus fonciers)";
+  dessinerLigneCleVal(page, fonts, 48, y, "Régime fiscal locatif", regimeLabel); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Loyer annuel initial / croissance", fmtEURPdf(params.loyerAnnuelInitial) + "  /  " + fmtPctPdf(params.tauxCroissanceLoyer) + " par an"); y -= 14;
   const tauxVacance = (params.vacancePct > 0) ? params.vacancePct / 100 : (params.vacanceMois / 12);
   if (tauxVacance > 0) {
@@ -140,7 +145,9 @@ function dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat) {
     y -= 11;
     page.drawText("Prélèvements sociaux inchangés : 17,2 %, exonération totale à 30 ans.", { x: 48, y, size: 8, font: fonts.regular, color: rgb(...PDF_COULEURS.sousTexte) });
   } else {
-    page.drawText("Barème en vigueur : 19 % IR + 17,2 % PS, abattements pour durée de détention", { x: 48, y, size: 8, font: fonts.regular, color: rgb(...PDF_COULEURS.sousTexte) });
+    const tauxIR = params.tauxIRplusvalue || 0.19;
+    const tauxPS = params.tauxPSplusvalue || 0.172;
+    page.drawText(`Barème en vigueur : ${fmtPctPdf(tauxIR)} IR + ${fmtPctPdf(tauxPS)} PS, abattements pour durée de détention`, { x: 48, y, size: 8, font: fonts.regular, color: rgb(...PDF_COULEURS.sousTexte) });
     y -= 11;
     page.drawText("(exonération totale à 22 ans pour l'IR et 30 ans pour les PS), surtaxe au-delà de 50 000 € de plus-value nette.", { x: 48, y, size: 8, font: fonts.regular, color: rgb(...PDF_COULEURS.sousTexte) });
   }

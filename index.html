@@ -67,6 +67,7 @@
               <select class="champ-input mono" id="immo_regimeFiscal">
                 <option value="nu">Location nue — revenus fonciers (charges déductibles)</option>
                 <option value="lmnp-microbic">LMNP Micro-BIC — abattement forfaitaire 50 %</option>
+                <option value="lmnp-reel">LMNP Réel — amortissements + charges déductibles</option>
               </select>
             </label>
           </div>
@@ -74,10 +75,41 @@
             <label class="champ"><span class="champ-label">PS location nue</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxPSnue" value="17.2" step="0.1" min="0" max="30"><span class="champ-suffix">%</span></div>
             </label>
-            <label class="champ"><span class="champ-label">PS LMNP Micro-BIC</span>
+            <label class="champ"><span class="champ-label">PS LMNP Micro-BIC / Réel</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxPSlmnp" value="18.6" step="0.1" min="0" max="30"><span class="champ-suffix">%</span></div>
             </label>
           </div>
+
+          <div id="section-lmnp-reel" style="display:none; margin-top:12px">
+            <div class="section-titre" style="margin-bottom:8px">Paramètres LMNP Réel — amortissements</div>
+            <div class="section-grille">
+              <label class="champ"><span class="champ-label">Quote-part terrain (%)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_quotepartTerrain" value="15" step="1" min="0" max="40"><span class="champ-suffix">%</span></div>
+              </label>
+              <label class="champ"><span class="champ-label">Mobilier / équipements (€)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantMobilier" value="5000" step="500"><span class="champ-suffix">€</span></div>
+              </label>
+              <label class="champ"><span class="champ-label">Durée amort. bien (ans)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureAmortBien" value="30" step="1" min="1" max="50"><span class="champ-suffix">ans</span></div>
+              </label>
+              <label class="champ"><span class="champ-label">Durée amort. travaux (ans)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureAmortTravaux" value="12" step="1" min="1" max="20"><span class="champ-suffix">ans</span></div>
+              </label>
+              <label class="champ"><span class="champ-label">Durée amort. mobilier (ans)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureAmortMobilier" value="7" step="1" min="1" max="15"><span class="champ-suffix">ans</span></div>
+              </label>
+              <label class="champ"><span class="champ-label">Assurance PNO (€/an)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_assurancePno" value="150" step="10"><span class="champ-suffix">€</span></div>
+              </label>
+              <label class="champ"><span class="champ-label">CFE (€/an)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_cfe" value="200" step="10"><span class="champ-suffix">€</span></div>
+              </label>
+              <label class="champ"><span class="champ-label">Frais comptable (€/an)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisComptable" value="400" step="50"><span class="champ-suffix">€</span></div>
+              </label>
+            </div>
+          </div>
+
           <div id="note-regime" class="note-fiscale" style="margin-top:8px"></div>
         </div>
 

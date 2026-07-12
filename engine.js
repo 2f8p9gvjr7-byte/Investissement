@@ -3,6 +3,7 @@
 // ============================================================
 
 function calculerMensualite(capital, tauxAnnuel, dureeAnnees) {
+  // Taux mensuel proportionnel (convention légale française pour les crédits immobiliers)
   const i = tauxAnnuel / 12;
   const nMois = dureeAnnees * 12;
   if (nMois <= 0) return 0;
@@ -12,6 +13,7 @@ function calculerMensualite(capital, tauxAnnuel, dureeAnnees) {
 
 function tableauAmortissement(capital, tauxAnnuel, dureeCreditAnnees, dureeAnalyseAnnees) {
   const mensualite = calculerMensualite(capital, tauxAnnuel, dureeCreditAnnees);
+  // Taux mensuel proportionnel (identique à calculerMensualite)
   const i = tauxAnnuel / 12;
   let capitalRestant = capital;
   const parAn = [];
@@ -134,7 +136,10 @@ function calculerImmobilier(p, dureeAnalyse) {
 
   const { mensualite, parAn } = tableauAmortissement(montantEmprunte, p.tauxCredit, p.dureeCredit, dureeAnalyse);
 
-  const flux = [-miseInitiale];
+  // Le flux initial du TRI = apport seul (capital réellement sorti de poche au jour 0).
+  // Les frais et travaux sont financés par le crédit, donc déjà intégrés dans l'annuité.
+  // La miseInitiale (apport+frais+travaux) reste utilisée pour la courbe et le multiple.
+  const flux = [-p.apport];
   const detailAnnuel = [];
   let cashFlowCumuleProgressif = 0;
   // Patrimoine net à l'achat (an=0) : équité initiale dans le bien (prix - dette contractée) moins la mise totale sortie.
@@ -157,22 +162,45 @@ function calculerImmobilier(p, dureeAnalyse) {
     const dataCredit = parAn[an - 1] || { interetsAnnee: 0, capitalAnnee: 0, capitalRestant: 0 };
     const annuiteCredit = dataCredit.interetsAnnee + dataCredit.capitalAnnee;
 
-    let revenuImposable, impot;
+    // Charges communes réelles (toujours payées, quel que soit le régime)
+    const pno = (p.assurancePno || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
+
+    // Amortissements LMNP Réel (bien + travaux + mobilier selon durées)
+    const valeurAmortBien = p.prixBien * (1 - (p.quotepartTerrain || 0));
+    const amortBien   = (p.dureAmortBien   && an <= p.dureAmortBien)   ? valeurAmortBien / p.dureAmortBien   : 0;
+    const amortTravaux = (p.dureAmortTravaux && an <= p.dureAmortTravaux) ? p.travauxInitiaux / p.dureAmortTravaux : 0;
+    const amortMobilier = (p.dureAmortMobilier && an <= p.dureAmortMobilier) ? (p.montantMobilier || 0) / p.dureAmortMobilier : 0;
+    const amortTotal = amortBien + amortTravaux + amortMobilier;
+
+    let revenuImposable, impot, cashFlow;
     if (p.regimeFiscal === "lmnp-microbic") {
-      // LMNP Micro-BIC : abattement forfaitaire 50%, charges NON déductibles
-      // Taux d'imposition = TMI personnel + PS paramétrable
-      const abattement = 0.50;
-      revenuImposable = loyer * (1 - abattement);
+      // LMNP Micro-BIC : abattement forfaitaire 50%, charges NON déductibles fiscalement
+      const cfe = (p.cfe || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
+      const cpta = p.fraisComptable || 0;
+      revenuImposable = loyer * 0.50;
       const tauxPS = p.tauxPSlmnp !== undefined ? p.tauxPSlmnp : 0.186;
       impot = revenuImposable * (p.tauxImpot + tauxPS);
+      // Charges réellement payées (non déductibles) soustraites du cash-flow
+      cashFlow = loyer - charges - taxe - pno - cfe - cpta - impot - annuiteCredit;
+
+    } else if (p.regimeFiscal === "lmnp-reel") {
+      // LMNP Réel : charges complètes + amortissements déductibles
+      // Bénéfice imposable = MAX(loyer - tout, 0) — déficit non imputable sur revenu global
+      const cfe = (p.cfe || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
+      const cpta = p.fraisComptable || 0;
+      const chargesDeductibles = charges + taxe + pno + cfe + cpta + dataCredit.interetsAnnee + amortTotal;
+      revenuImposable = Math.max(loyer - chargesDeductibles, 0);
+      const tauxPS = p.tauxPSlmnp !== undefined ? p.tauxPSlmnp : 0.172;
+      impot = revenuImposable * (p.tauxImpot + tauxPS);
+      cashFlow = loyer - charges - taxe - pno - cfe - cpta - impot - annuiteCredit;
+
     } else {
-      // Location nue : charges et intérêts déductibles, taux global saisi par l'utilisateur
-      revenuImposable = Math.max(loyer - charges - taxe - dataCredit.interetsAnnee, 0);
+      // Location nue : entretien + taxe + PNO + intérêts déductibles (pas CFE, pas comptable, pas amort)
+      revenuImposable = Math.max(loyer - charges - taxe - pno - dataCredit.interetsAnnee, 0);
       impot = revenuImposable * p.tauxImpot;
+      cashFlow = loyer - charges - taxe - pno - impot - annuiteCredit;
     }
 
-    // En LMNP, les charges restent dues même si non déductibles fiscalement
-    const cashFlow = loyer - charges - taxe - impot - annuiteCredit;
     flux.push(cashFlow);
     cashFlowCumuleProgressif += cashFlow;
 
@@ -204,8 +232,24 @@ function calculerImmobilier(p, dureeAnalyse) {
   const equiteNetteBrute = valeurFutureBien - capitalRestantFinal;
 
   const prixAcquisitionMajore = p.prixBien + fraisRetenusPourPV + travauxRetenusPourPV(dureeAnalyse);
-  const plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionMajore, 0);
-  const fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
+  let plusValueBrute, fiscalitePV;
+
+  if (p.regimeFiscal === "lmnp-reel") {
+    // LMNP Réel (réforme 15/02/2025) : les amortissements cumulés sont réintégrés dans la PV.
+    // PV brute = valeur cession − (prix achat + frais − amortissements cumulés)
+    const valeurAmortBien = p.prixBien * (1 - (p.quotepartTerrain || 0));
+    const amortCumulBien   = Math.min(dureeAnalyse, p.dureAmortBien   || 30) * (valeurAmortBien / (p.dureAmortBien || 30));
+    const amortCumulTravaux = Math.min(dureeAnalyse, p.dureAmortTravaux || 12) * (p.travauxInitiaux / (p.dureAmortTravaux || 12));
+    const amortCumulMobil  = Math.min(dureeAnalyse, p.dureAmortMobilier || 7) * ((p.montantMobilier || 0) / (p.dureAmortMobilier || 7));
+    const amortCumul = amortCumulBien + amortCumulTravaux + amortCumulMobil;
+    const prixAcquisitionFiscalReduit = p.prixBien + fraisAcquisition + p.travauxInitiaux - amortCumul;
+    plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionFiscalReduit, 0);
+    fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
+  } else {
+    plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionMajore, 0);
+    fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
+  }
+
   const equiteNetteFinale = equiteNetteBrute - fiscalitePV.total;
 
   const fluxAvecSortie = [...flux];

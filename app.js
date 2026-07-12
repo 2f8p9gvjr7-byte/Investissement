@@ -15,8 +15,11 @@ const immo = {
   tauxImpot: 0.30, tauxCredit: 0.035, dureeCredit: 20,
   tauxProgressionValeur: 0.02,
   regimeFiscal: "nu",
-  tauxPSnue: 0.172,   // PS location nue (revenus fonciers) — 17,2% en vigueur
-  tauxPSlmnp: 0.186,  // PS LMNP Micro-BIC — 18,6% depuis LFSS 2026
+  tauxPSnue: 0.172, tauxPSlmnp: 0.186,
+  // Paramètres LMNP Réel
+  quotepartTerrain: 0.15, montantMobilier: 5000,
+  dureAmortBien: 30, dureAmortTravaux: 12, dureAmortMobilier: 7,
+  assurancePno: 150, cfe: 200, fraisComptable: 400,
   modeFraisPV: "auto", modeTravauxPV: "auto", baremePlusValueIR: "actuel",
   tauxIRplusvalue: 0.19, tauxPSplusvalue: 0.172,
 };
@@ -159,6 +162,7 @@ const PCT_FIELDS = new Set([
   "rendementAnnuelBrut", "fraisGestionAnnuels",
   "tauxIRplusvalue", "tauxPSplusvalue",
   "tauxPSnue", "tauxPSlmnp",
+  "quotepartTerrain",
 ]);
 
 function lierFormulaire(prefix, data) {
@@ -223,10 +227,18 @@ function mettreAjourRegimeFiscal() {
     labelImpot.textContent = lmnp ? "Taux marginal d'IR (TMI)" : "Taux d'impôt (loyers)";
   }
   const noteRegime = document.getElementById("note-regime");
+  const reel = immo.regimeFiscal === "lmnp-reel";
+  const sectionReel = document.getElementById("section-lmnp-reel");
+  if (sectionReel) sectionReel.style.display = reel ? "block" : "none";
+
   if (noteRegime) {
-    noteRegime.innerHTML = lmnp
-      ? `LMNP Micro-BIC : abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement. Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS (modifiable ci-dessus). Seuil 2026&nbsp;: 83&nbsp;600&nbsp;€ de recettes annuelles.`
-      : `Location nue&nbsp;: charges réelles déductibles (entretien, taxe foncière, intérêts d'emprunt). Saisissez votre taux global IR&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS (modifiable ci-dessus) dans le champ "Taux d'impôt".`;
+    if (reel) {
+      noteRegime.innerHTML = `LMNP Réel&nbsp;: toutes charges déductibles (entretien, taxe, PNO, CFE, comptable, intérêts) + amortissements du bien, travaux et mobilier. Bénéfice imposable = MAX(loyers − tout, 0). Taux = votre TMI + ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. ⚠️ À la revente, amortissements cumulés réintégrés dans la plus-value (réforme 15/02/2025).`;
+    } else if (lmnp) {
+      noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement. Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2026&nbsp;: 83&nbsp;600&nbsp;€ de recettes annuelles.`;
+    } else {
+      noteRegime.innerHTML = `Location nue&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Saisissez votre taux global IR&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS dans le champ "Taux d'impôt".`;
+    }
   }
 }
 
