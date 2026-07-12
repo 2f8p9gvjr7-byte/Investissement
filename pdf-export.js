@@ -88,7 +88,7 @@ function dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat) {
   dessinerLigneCleVal(page, fonts, 48, y, "Apport", fmtEURPdf(params.apport)); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Frais d'acquisition", fmtPctPdf(params.fraisAcquisitionPct) + "  (" + fmtEURPdf(params.prixBien * params.fraisAcquisitionPct) + ")"); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Travaux initiaux", fmtEURPdf(params.travauxInitiaux)); y -= 14;
-  dessinerLigneCleVal(page, fonts, 48, y, "Mise initiale totale (sortie de trésorerie)", fmtEURPdf(resultat.miseInitiale)); y -= 14;
+  dessinerLigneCleVal(page, fonts, 48, y, "Apport personnel (mise de fonds)", fmtEURPdf(params.apport)); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Montant emprunté", fmtEURPdf(params.montantEmprunte)); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Taux du crédit / durée", fmtPctPdf(params.tauxCredit) + "  /  " + params.dureeCredit + " ans"); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Mensualité", fmtEURPdf(resultat.mensualite)); y -= 20;
@@ -114,7 +114,7 @@ function dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat) {
   dessinerLigneCleVal(page, fonts, 48, y, "TRI annuel", fmtPctPdf(resultat.tri)); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Valeur finale nette (patrimoine total)", fmtEURPdf(resultat.valeurFinaleNette)); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Cash-flow cumulé (mise comprise, hors revente)", fmtEURPdf(resultat.cashFlowCumule)); y -= 14;
-  dessinerLigneCleVal(page, fonts, 48, y, "Multiple sur la mise initiale", (resultat.valeurFinaleNette / resultat.miseInitiale).toFixed(2) + "x"); y -= 14;
+  dessinerLigneCleVal(page, fonts, 48, y, "Multiple sur l'apport", (resultat.valeurFinaleNette / params.apport).toFixed(2) + "x"); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Valeur de revente brute estimée du bien", fmtEURPdf(resultat.valeurFutureBien)); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Capital restant dû à la sortie", fmtEURPdf(resultat.capitalRestantFinal) + "  (soldé sur le produit de la vente)"); y -= 14;
   if (resultat.van !== undefined) {

@@ -321,7 +321,11 @@ function scrollVersPanneau(id) {
 // ============================================================
 
 function carteResultatHtml(cle, r) {
-  const multiple = r.miseInitiale > 0 ? r.valeurFinaleNette / r.miseInitiale : null;
+  // Pour l'immobilier : multiple et mise = apport seul (cohérent avec le TRI)
+  // Pour les autres supports : miseInitiale (versement réel)
+  const miseRef = cle === "immobilier" ? immo.apport : r.miseInitiale;
+  const multiple = miseRef > 0 ? r.valeurFinaleNette / miseRef : null;
+  const labelMise = cle === "immobilier" ? "Apport" : "Mise initiale";
   return `
     <div class="resultat-carte" style="--c:${COULEURS[cle]}">
       <div class="resultat-nom">${NOMS[cle]}</div>
@@ -330,8 +334,8 @@ function carteResultatHtml(cle, r) {
       <div class="resultat-grille">
         <div><div class="resultat-val">${fmtEUR(r.valeurFinaleNette)}</div><div class="resultat-sub">Valeur finale nette</div></div>
         <div><div class="resultat-val">${fmtEUR(r.cashFlowCumule)}</div><div class="resultat-sub">Cash-flow cumulé (mise comprise)</div></div>
-        <div><div class="resultat-val">${multiple !== null ? multiple.toFixed(2) + "x" : "—"}</div><div class="resultat-sub">Multiple sur mise</div></div>
-        <div><div class="resultat-val">${fmtEUR(r.miseInitiale)}</div><div class="resultat-sub">Mise initiale</div></div>
+        <div><div class="resultat-val">${multiple !== null ? multiple.toFixed(2) + "x" : "—"}</div><div class="resultat-sub">Multiple sur ${labelMise.toLowerCase()}</div></div>
+        <div><div class="resultat-val">${fmtEUR(miseRef)}</div><div class="resultat-sub">${labelMise}</div></div>
       </div>
       <div class="resultat-grille resultat-grille-van">
         <div><div class="resultat-val resultat-val-van">${fmtEUR(r.van)}</div><div class="resultat-sub">VAN au taux choisi</div></div>
