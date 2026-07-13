@@ -91,12 +91,18 @@
               <label class="champ"><span class="champ-label">CFE (€/an)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_cfe" value="200" step="10"><span class="champ-suffix">€</span></div>
               </label>
+              <label class="champ"><span class="champ-label">Croissance CFE</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceCfe" value="2" step="0.1"><span class="champ-suffix">%</span></div>
+              </label>
               <label class="champ"><span class="champ-label">Frais comptable (€/an)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisComptable" value="400" step="50"><span class="champ-suffix">€</span></div>
               </label>
+              <label class="champ"><span class="champ-label">Croissance frais comptable</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceComptable" value="2" step="0.1"><span class="champ-suffix">%</span></div>
+              </label>
             </div>
             <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
-              CFE et frais comptable évoluent tous deux avec le taux de croissance des charges (section "Charges &amp; fiscalité" ci-dessous) — comme l'entretien et la taxe foncière.
+              CFE et frais comptable ont chacun leur propre taux de croissance annuel, réglable indépendamment des autres charges (entretien, taxe foncière).
             </div>
           </div>
 

@@ -92,6 +92,7 @@ const immo = {
   quotepartTerrain: 0.15, montantMobilier: 5000,
   dureAmortBien: 30, dureAmortTravaux: 12, dureAmortMobilier: 7,
   assurancePno: 0, cfe: 200, fraisComptable: 400,
+  tauxCroissanceCfe: 0.02, tauxCroissanceComptable: 0.02,
   modeFraisPV: "auto", modeTravauxPV: "auto", baremePlusValueIR: "actuel",
   tauxIRplusvalue: 0.19, tauxPSplusvalue: 0.172,
 };
@@ -232,6 +233,7 @@ const PCT_FIELDS = new Set([
   "tauxIRplusvalue", "tauxPSplusvalue",
   "tauxPSnue", "tauxPSlmnp",
   "quotepartTerrain",
+  "tauxCroissanceCfe", "tauxCroissanceComptable",
 ]);
 
 function lierFormulaire(prefix, data) {

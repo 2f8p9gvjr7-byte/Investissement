@@ -172,11 +172,11 @@ function calculerImmobilier(p, dureeAnalyse) {
     const amortMobilier = (p.dureAmortMobilier && an <= p.dureAmortMobilier) ? (p.montantMobilier || 0) / p.dureAmortMobilier : 0;
     const amortTotal = amortBien + amortTravaux + amortMobilier;
 
-    // CFE et frais comptable : charges réelles du LMNP (Micro-BIC et Réel), toutes deux indexées
-    // sur la même croissance annuelle que les autres charges (cohérence avec le reste du modèle ;
-    // corrigé le 13/07/2026 — les frais comptables restaient auparavant figés dans le temps).
-    const cfe = (p.cfe || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
-    const cpta = (p.fraisComptable || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
+    // CFE et frais comptable : chacun a son propre taux de croissance annuel,
+    // indépendant des autres charges (corrigé le 13/07/2026 — réglable séparément
+    // dans la section "Charges LMNP communes").
+    const cfe = (p.cfe || 0) * Math.pow(1 + (p.tauxCroissanceCfe ?? p.tauxCroissanceCharges), an - 1);
+    const cpta = (p.fraisComptable || 0) * Math.pow(1 + (p.tauxCroissanceComptable ?? p.tauxCroissanceCharges), an - 1);
 
     let revenuImposable, impot, cashFlow;
     if (p.regimeFiscal === "lmnp-microbic") {
