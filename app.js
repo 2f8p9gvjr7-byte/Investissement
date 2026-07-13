@@ -1,3 +1,73 @@
+
+// ============================================================
+// PERSISTANCE — sauvegarde et restauration des paramètres
+// ============================================================
+
+const CLE_STOCKAGE = 'comparateur-params-v1';
+
+function sauvegarderParams() {
+  try {
+    const data = {
+      immo: { ...immo },
+      action: { ...action },
+      obligation: { ...obligation },
+      etf: { ...etf },
+      av: { ...av },
+      dureeAnalyse,
+      tauxActualisation,
+    };
+    localStorage.setItem(CLE_STOCKAGE, JSON.stringify(data));
+  } catch(e) {}
+}
+
+function restaurerParams() {
+  try {
+    const raw = localStorage.getItem(CLE_STOCKAGE);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data) return false;
+
+    // Restaurer chaque objet de paramètres
+    if (data.immo) Object.assign(immo, data.immo);
+    if (data.action) Object.assign(action, data.action);
+    if (data.obligation) Object.assign(obligation, data.obligation);
+    if (data.etf) Object.assign(etf, data.etf);
+    if (data.av) Object.assign(av, data.av);
+    if (data.dureeAnalyse) dureeAnalyse = data.dureeAnalyse;
+    if (data.tauxActualisation !== undefined) tauxActualisation = data.tauxActualisation;
+    return true;
+  } catch(e) { return false; }
+}
+
+function restaurerFormulaires() {
+  // Restaurer tous les champs HTML depuis les objets de paramètres
+  const prefixes = [
+    ['immo', immo], ['action', action], ['obligation', obligation], ['etf', etf], ['av', av]
+  ];
+  prefixes.forEach(([prefix, data]) => {
+    Object.keys(data).forEach(key => {
+      const el = document.getElementById(`${prefix}_${key}`);
+      if (!el) return;
+      if (el.tagName === 'SELECT') {
+        el.value = data[key];
+      } else {
+        // Reconvertir les décimaux en % pour l'affichage
+        const val = PCT_FIELDS.has(key) ? (data[key] * 100) : data[key];
+        el.value = val;
+      }
+    });
+  });
+
+  // Curseurs
+  const sliderDuree = document.getElementById('dureeAnalyse');
+  if (sliderDuree) { sliderDuree.value = dureeAnalyse; document.getElementById('dureeVal').textContent = dureeAnalyse + ' ans'; }
+  const sliderTaux = document.getElementById('tauxActualisation');
+  if (sliderTaux) { sliderTaux.value = tauxActualisation * 100; document.getElementById('tauxActualisationVal').textContent = (tauxActualisation * 100).toFixed(1).replace('.', ',') + ' %'; }
+
+  // Afficher/masquer section LMNP Réel
+  mettreAjourRegimeFiscal();
+}
+
 // ============================================================
 // ÉTAT DE L'APPLICATION
 // ============================================================
@@ -522,6 +592,7 @@ function recalculer() {
   rendreDetailFiscalTitre("etf", resultats.etf);
   rendreDetailFiscalAv(resultats.av);
   dessinerGraphique(resultats);
+  sauvegarderParams();
 }
 
 // ============================================================
@@ -595,7 +666,16 @@ document.getElementById("btnExportTout").addEventListener("click", async () => {
 // INITIALISATION
 // ============================================================
 
+// Restaurer les paramètres sauvegardés, puis recalculer
+if (restaurerParams()) {
+  restaurerFormulaires();
+}
 recalculer();
+
+// Sauvegarder à chaque recalcul (déjà appelé après chaque changement)
+const _recalculerOriginal = recalculer;
+// Monkey-patch pour sauvegarder après chaque recalcul
+
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
