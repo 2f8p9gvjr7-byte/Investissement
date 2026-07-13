@@ -1,10 +1,8 @@
-const CACHE = 'comparateur-v1783931652781';
+const CACHE = 'comparateur-v1783950000000';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
-
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
 });
-
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys => Promise.all(
@@ -12,11 +10,9 @@ self.addEventListener('activate', e => {
     )).then(() => self.clients.claim())
   );
 });
-
 self.addEventListener('message', e => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
-
 self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cached => {
