@@ -172,11 +172,14 @@ function calculerImmobilier(p, dureeAnalyse) {
     const amortMobilier = (p.dureAmortMobilier && an <= p.dureAmortMobilier) ? (p.montantMobilier || 0) / p.dureAmortMobilier : 0;
     const amortTotal = amortBien + amortTravaux + amortMobilier;
 
-    // CFE et frais comptable : chacun a son propre taux de croissance annuel,
-    // indépendant des autres charges (corrigé le 13/07/2026 — réglable séparément
-    // dans la section "Charges LMNP communes").
+    // CFE : due dans les deux régimes LMNP (taxe professionnelle indépendante de la comptabilité).
+    // Frais comptable : réservés au Réel — le Micro-BIC est un régime déclaratif simplifié qui
+    // ne nécessite pas d'expert-comptable, contrairement au Réel (liasse fiscale, amortissements).
+    // Corrigé le 13/07/2026.
     const cfe = (p.cfe || 0) * Math.pow(1 + (p.tauxCroissanceCfe ?? p.tauxCroissanceCharges), an - 1);
-    const cpta = (p.fraisComptable || 0) * Math.pow(1 + (p.tauxCroissanceComptable ?? p.tauxCroissanceCharges), an - 1);
+    const cpta = p.regimeFiscal === "lmnp-reel"
+      ? (p.fraisComptable || 0) * Math.pow(1 + (p.tauxCroissanceComptable ?? p.tauxCroissanceCharges), an - 1)
+      : 0;
 
     let revenuImposable, impot, cashFlow;
     if (p.regimeFiscal === "lmnp-microbic") {
@@ -237,14 +240,19 @@ function calculerImmobilier(p, dureeAnalyse) {
   let plusValueBrute, fiscalitePV;
 
   if (p.regimeFiscal === "lmnp-reel") {
-    // LMNP Réel (réforme 15/02/2025) : les amortissements cumulés sont réintégrés dans la PV.
-    // PV brute = valeur cession − (prix achat + frais − amortissements cumulés)
+    // LMNP Réel (réforme 15/02/2025, art. 84 LF2025) : les amortissements CUMULÉS DES SEULS
+    // COMPOSANTS IMMOBILIERS (bâti + travaux immobilisés) sont réintégrés dans la plus-value —
+    // le mobilier en est exclu (doctrine administrative, notice 2048-IMM). Les majorations
+    // forfaitaires 7,5%/15% restent utilisables normalement (comparées au réel), calculées sur
+    // le prix d'acquisition initial, indépendamment des amortissements pratiqués (clarification
+    // administrative de mars 2025 : les forfaits s'appliquent AVANT réintégration des amortissements).
+    // Corrigé le 13/07/2026 — le mobilier était auparavant inclus à tort dans la réintégration,
+    // et les frais/travaux "retenus" (auto le plus avantageux) n'étaient pas utilisés ici.
     const valeurAmortBien = p.prixBien * (1 - (p.quotepartTerrain || 0));
     const amortCumulBien   = Math.min(dureeAnalyse, p.dureAmortBien   || 30) * (valeurAmortBien / (p.dureAmortBien || 30));
     const amortCumulTravaux = Math.min(dureeAnalyse, p.dureAmortTravaux || 12) * (p.travauxInitiaux / (p.dureAmortTravaux || 12));
-    const amortCumulMobil  = Math.min(dureeAnalyse, p.dureAmortMobilier || 7) * ((p.montantMobilier || 0) / (p.dureAmortMobilier || 7));
-    const amortCumul = amortCumulBien + amortCumulTravaux + amortCumulMobil;
-    const prixAcquisitionFiscalReduit = p.prixBien + fraisAcquisition + p.travauxInitiaux - amortCumul;
+    const amortCumulReintegre = amortCumulBien + amortCumulTravaux; // mobilier exclu
+    const prixAcquisitionFiscalReduit = prixAcquisitionMajore - amortCumulReintegre;
     plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionFiscalReduit, 0);
     fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
   } else {

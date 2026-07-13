@@ -94,21 +94,21 @@
               <label class="champ"><span class="champ-label">Croissance CFE</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceCfe" value="2" step="0.1"><span class="champ-suffix">%</span></div>
               </label>
+            </div>
+            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
+              La CFE est due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité). Elle évolue avec son propre taux de croissance annuel.
+            </div>
+          </div>
+
+          <div id="section-lmnp-reel" style="display:none; margin-top:12px">
+            <div class="section-titre" style="margin-bottom:8px">Paramètres LMNP Réel — amortissements et comptabilité</div>
+            <div class="section-grille">
               <label class="champ"><span class="champ-label">Frais comptable (€/an)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisComptable" value="400" step="50"><span class="champ-suffix">€</span></div>
               </label>
               <label class="champ"><span class="champ-label">Croissance frais comptable</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceComptable" value="2" step="0.1"><span class="champ-suffix">%</span></div>
               </label>
-            </div>
-            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
-              CFE et frais comptable ont chacun leur propre taux de croissance annuel, réglable indépendamment des autres charges (entretien, taxe foncière).
-            </div>
-          </div>
-
-          <div id="section-lmnp-reel" style="display:none; margin-top:12px">
-            <div class="section-titre" style="margin-bottom:8px">Paramètres LMNP Réel — amortissements</div>
-            <div class="section-grille">
               <label class="champ"><span class="champ-label">Quote-part terrain (%)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_quotepartTerrain" value="15" step="1" min="0" max="40"><span class="champ-suffix">%</span></div>
               </label>
@@ -124,6 +124,9 @@
               <label class="champ"><span class="champ-label">Durée amort. mobilier (ans)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureAmortMobilier" value="7" step="1" min="1" max="15"><span class="champ-suffix">ans</span></div>
               </label>
+            </div>
+            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
+              Frais comptable réservés au Réel (le Micro-BIC ne nécessite pas d'expert-comptable). À la revente, seuls les amortissements du bâti et des travaux sont réintégrés dans la plus-value — le mobilier en est exclu.
             </div>
           </div>
 
