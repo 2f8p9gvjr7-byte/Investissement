@@ -677,20 +677,42 @@ const _recalculerOriginal = recalculer;
 // Monkey-patch pour sauvegarder après chaque recalcul
 
 
+function afficherNotifMaj() {
+  if (document.getElementById('notif-maj')) return;
+  const notif = document.createElement('div');
+  notif.id = 'notif-maj';
+  notif.innerHTML = `
+    <span class="notif-maj-icone">🔄</span>
+    <span class="notif-maj-texte">Nouvelle version disponible — rechargement dans <strong id="notif-compte">5</strong> s</span>
+    <button class="notif-maj-btn" onclick="window.location.reload()">Maintenant</button>
+    <button class="notif-maj-fermer" onclick="this.parentElement.remove()" title="Ignorer">✕</button>
+  `;
+  document.body.appendChild(notif);
+  let secondes = 5;
+  const timer = setInterval(() => {
+    secondes--;
+    const el = document.getElementById('notif-compte');
+    if (el) el.textContent = secondes;
+    if (secondes <= 0) { clearInterval(timer); window.location.reload(); }
+  }, 1000);
+}
+
+let dejaRecharge = false;
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then(reg => {
+      setInterval(() => reg.update(), 60000);
       reg.addEventListener('updatefound', () => {
         const sw = reg.installing;
         sw.addEventListener('statechange', () => {
           if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-            if (confirm('Nouvelle version disponible. Recharger ?')) {
-              sw.postMessage('SKIP_WAITING');
-              window.location.reload();
-            }
+            afficherNotifMaj();
           }
         });
       });
     }).catch(() => {});
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!dejaRecharge) { dejaRecharge = true; window.location.reload(); }
+    });
   });
 }
