@@ -172,11 +172,15 @@ function calculerImmobilier(p, dureeAnalyse) {
     const amortMobilier = (p.dureAmortMobilier && an <= p.dureAmortMobilier) ? (p.montantMobilier || 0) / p.dureAmortMobilier : 0;
     const amortTotal = amortBien + amortTravaux + amortMobilier;
 
+    // CFE et frais comptable : charges réelles du LMNP (Micro-BIC et Réel), toutes deux indexées
+    // sur la même croissance annuelle que les autres charges (cohérence avec le reste du modèle ;
+    // corrigé le 13/07/2026 — les frais comptables restaient auparavant figés dans le temps).
+    const cfe = (p.cfe || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
+    const cpta = (p.fraisComptable || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
+
     let revenuImposable, impot, cashFlow;
     if (p.regimeFiscal === "lmnp-microbic") {
       // LMNP Micro-BIC : abattement forfaitaire 50%, charges NON déductibles fiscalement
-      const cfe = (p.cfe || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
-      const cpta = p.fraisComptable || 0;
       revenuImposable = loyer * 0.50;
       const tauxPS = p.tauxPSlmnp !== undefined ? p.tauxPSlmnp : 0.186;
       impot = revenuImposable * (p.tauxImpot + tauxPS);
@@ -186,8 +190,6 @@ function calculerImmobilier(p, dureeAnalyse) {
     } else if (p.regimeFiscal === "lmnp-reel") {
       // LMNP Réel : charges complètes + amortissements déductibles
       // Bénéfice imposable = MAX(loyer - tout, 0) — déficit non imputable sur revenu global
-      const cfe = (p.cfe || 0) * Math.pow(1 + p.tauxCroissanceCharges, an - 1);
-      const cpta = p.fraisComptable || 0;
       const chargesDeductibles = charges + taxe + pno + cfe + cpta + dataCredit.interetsAnnee + amortTotal;
       revenuImposable = Math.max(loyer - chargesDeductibles, 0);
       const tauxPS = p.tauxPSlmnp !== undefined ? p.tauxPSlmnp : 0.172;

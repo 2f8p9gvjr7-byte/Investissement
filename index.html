@@ -80,6 +80,26 @@
             </label>
           </div>
 
+          <!-- Champs communs aux DEUX régimes LMNP (Micro-BIC et Réel) : CFE et frais comptable
+               s'appliquent quel que soit le mode d'imposition choisi dès lors qu'il s'agit de LMNP.
+               Anciennement rattachés à tort à la seule section "LMNP Réel" (masqués et donc non
+               saisissables en Micro-BIC alors que le moteur les appliquait déjà silencieusement
+               avec leur valeur par défaut) — corrigé le 13/07/2026. -->
+          <div id="section-lmnp-commun" style="display:none; margin-top:12px">
+            <div class="section-titre" style="margin-bottom:8px">Charges LMNP communes (Micro-BIC et Réel)</div>
+            <div class="section-grille">
+              <label class="champ"><span class="champ-label">CFE (€/an)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_cfe" value="200" step="10"><span class="champ-suffix">€</span></div>
+              </label>
+              <label class="champ"><span class="champ-label">Frais comptable (€/an)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisComptable" value="400" step="50"><span class="champ-suffix">€</span></div>
+              </label>
+            </div>
+            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
+              CFE et frais comptable évoluent tous deux avec le taux de croissance des charges (section "Charges &amp; fiscalité" ci-dessous) — comme l'entretien et la taxe foncière.
+            </div>
+          </div>
+
           <div id="section-lmnp-reel" style="display:none; margin-top:12px">
             <div class="section-titre" style="margin-bottom:8px">Paramètres LMNP Réel — amortissements</div>
             <div class="section-grille">
@@ -97,12 +117,6 @@
               </label>
               <label class="champ"><span class="champ-label">Durée amort. mobilier (ans)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureAmortMobilier" value="7" step="1" min="1" max="15"><span class="champ-suffix">ans</span></div>
-              </label>
-              <label class="champ"><span class="champ-label">CFE (€/an)</span>
-                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_cfe" value="200" step="10"><span class="champ-suffix">€</span></div>
-              </label>
-              <label class="champ"><span class="champ-label">Frais comptable (€/an)</span>
-                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisComptable" value="400" step="50"><span class="champ-suffix">€</span></div>
               </label>
             </div>
           </div>
