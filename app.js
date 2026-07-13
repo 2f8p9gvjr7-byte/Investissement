@@ -27,7 +27,6 @@ function restaurerParams() {
     const data = JSON.parse(raw);
     if (!data) return false;
 
-    // Restaurer chaque objet de paramètres
     if (data.immo) Object.assign(immo, data.immo);
     if (data.action) Object.assign(action, data.action);
     if (data.obligation) Object.assign(obligation, data.obligation);
@@ -39,8 +38,13 @@ function restaurerParams() {
   } catch(e) { return false; }
 }
 
+// Arrondit à 2 décimales — évite les artefacts d'arithmétique flottante
+// (ex. 0.035 * 100 = 3.5000000000000004 en JS) lors de la reconversion en %.
+function arrondi2(v) {
+  return Math.round(v * 100) / 100;
+}
+
 function restaurerFormulaires() {
-  // Restaurer tous les champs HTML depuis les objets de paramètres
   const prefixes = [
     ['immo', immo], ['action', action], ['obligation', obligation], ['etf', etf], ['av', av]
   ];
@@ -51,20 +55,19 @@ function restaurerFormulaires() {
       if (el.tagName === 'SELECT') {
         el.value = data[key];
       } else {
-        // Reconvertir les décimaux en % pour l'affichage
-        const val = PCT_FIELDS.has(key) ? (data[key] * 100) : data[key];
+        // Reconvertir les décimaux en % pour l'affichage, arrondi à 2 décimales
+        // pour éviter les artefacts d'arithmétique flottante (ex. 3.5000000000000004).
+        const val = PCT_FIELDS.has(key) ? arrondi2(data[key] * 100) : data[key];
         el.value = val;
       }
     });
   });
 
-  // Curseurs
   const sliderDuree = document.getElementById('dureeAnalyse');
   if (sliderDuree) { sliderDuree.value = dureeAnalyse; document.getElementById('dureeVal').textContent = dureeAnalyse + ' ans'; }
   const sliderTaux = document.getElementById('tauxActualisation');
   if (sliderTaux) { sliderTaux.value = tauxActualisation * 100; document.getElementById('tauxActualisationVal').textContent = (tauxActualisation * 100).toFixed(1).replace('.', ',') + ' %'; }
 
-  // Afficher/masquer section LMNP Réel
   mettreAjourRegimeFiscal();
 }
 
@@ -77,7 +80,7 @@ let tauxActualisation = 0.02;
 
 const immo = {
   prixBien: 200000, apport: 40000, fraisAcquisitionPct: 0.08, travauxInitiaux: 5000,
-  montantEmprunte: 181000, // par défaut : (prixBien + frais + travaux) - apport, modifiable librement
+  montantEmprunte: 181000,
   loyerAnnuelInitial: 9600, tauxCroissanceLoyer: 0.015,
   vacancePct: 0, vacanceMois: 0,
   chargesEntretienInitial: 1200, tauxCroissanceCharges: 0.02,
@@ -86,7 +89,6 @@ const immo = {
   tauxProgressionValeur: 0.02,
   regimeFiscal: "nu",
   tauxPSnue: 0.172, tauxPSlmnp: 0.186,
-  // Paramètres LMNP Réel
   quotepartTerrain: 0.15, montantMobilier: 5000,
   dureAmortBien: 30, dureAmortTravaux: 12, dureAmortMobilier: 7,
   assurancePno: 0, cfe: 200, fraisComptable: 400,
@@ -94,9 +96,6 @@ const immo = {
   tauxIRplusvalue: 0.19, tauxPSplusvalue: 0.172,
 };
 
-// Taux PFU 2026 : 31,4 % (12,8 % IR + 18,6 % PS suite à la hausse de la CSG votée en LFSS 2026)
-// La hausse de 17,2% à 18,6% s'applique aux dividendes, plus-values mobilières et revenus financiers.
-// Les plus-values IMMOBILIÈRES restent à 17,2% (exception légale explicite dans la LFSS 2026).
 const action = {
   miseInitiale: 61000, rendementAnnuelInitial: 0.025, tauxCroissanceRendement: 0.02,
   tauxImpotRevenu: 0.314, tauxProgressionValeur: 0.06, tauxImpotPlusValue: 0.314,
@@ -291,13 +290,23 @@ function recalculerMontantEmprunteAuto() {
 
 function mettreAjourRegimeFiscal() {
   const lmnp = immo.regimeFiscal === "lmnp-microbic";
+  const reel = immo.regimeFiscal === "lmnp-reel";
+  const estLmnp = lmnp || reel;
+
   const labelImpot = document.querySelector("label[for='immo_tauxImpot'] .champ-label, #immo_tauxImpot")
     ?.closest("label")?.querySelector(".champ-label");
   if (labelImpot) {
-    labelImpot.textContent = lmnp ? "Taux marginal d'IR (TMI)" : "Taux d'impôt (loyers)";
+    labelImpot.textContent = estLmnp ? "Taux marginal d'IR (TMI)" : "Taux d'impôt (loyers)";
   }
   const noteRegime = document.getElementById("note-regime");
-  const reel = immo.regimeFiscal === "lmnp-reel";
+
+  // Section commune aux deux régimes LMNP (CFE + frais comptable) : affichée dès que
+  // le régime est Micro-BIC OU Réel, car le moteur applique ces charges aux deux
+  // (corrigé le 13/07/2026 — auparavant rattachée à tort au seul Réel, donc invisible
+  // et non modifiable en Micro-BIC alors qu'appliquée silencieusement par le moteur).
+  const sectionCommun = document.getElementById("section-lmnp-commun");
+  if (sectionCommun) sectionCommun.style.display = estLmnp ? "block" : "none";
+
   const sectionReel = document.getElementById("section-lmnp-reel");
   if (sectionReel) sectionReel.style.display = reel ? "block" : "none";
 
@@ -305,7 +314,7 @@ function mettreAjourRegimeFiscal() {
     if (reel) {
       noteRegime.innerHTML = `LMNP Réel&nbsp;: toutes charges déductibles (entretien, taxe, PNO, CFE, comptable, intérêts) + amortissements du bien, travaux et mobilier. Bénéfice imposable = MAX(loyers − tout, 0). Taux = votre TMI + ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. ⚠️ À la revente, amortissements cumulés réintégrés dans la plus-value (réforme 15/02/2025).`;
     } else if (lmnp) {
-      noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement. Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2026&nbsp;: 83&nbsp;600&nbsp;€ de recettes annuelles.`;
+      noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement (CFE et frais comptable restent toutefois payés et impactent le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2026&nbsp;: 83&nbsp;600&nbsp;€ de recettes annuelles.`;
     } else {
       noteRegime.innerHTML = `Location nue&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Saisissez votre taux global IR&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS dans le champ "Taux d'impôt".`;
     }
@@ -318,31 +327,26 @@ document.getElementById("immo_regimeFiscal").addEventListener("change", (e) => {
   recalculer();
 });
 
-// Initialiser les libellés au chargement
 mettreAjourRegimeFiscal();
 
 document.getElementById("btnRecalcEmprunt").addEventListener("click", recalculerMontantEmprunteAuto);
 
-// Synchronisation bidirectionnelle vacance (% ↔ mois) : modifier l'un met à jour l'autre
 document.getElementById("immo_vacancePct").addEventListener("input", (e) => {
   const pct = parseFloat(e.target.value) || 0;
   immo.vacancePct = pct;
-  immo.vacanceMois = 0; // priorité au %, on efface les mois
-  document.getElementById("immo_vacanceMois").value = (pct / 100 * 12).toFixed(2);
+  immo.vacanceMois = 0;
+  document.getElementById("immo_vacanceMois").value = arrondi2(pct / 100 * 12);
   recalculer();
 });
 document.getElementById("immo_vacanceMois").addEventListener("input", (e) => {
   const mois = parseFloat(e.target.value) || 0;
   immo.vacanceMois = mois;
-  immo.vacancePct = 0; // priorité aux mois, on efface le %
-  document.getElementById("immo_vacancePct").value = (mois / 12 * 100).toFixed(2);
+  immo.vacancePct = 0;
+  document.getElementById("immo_vacancePct").value = arrondi2(mois / 12 * 100);
   recalculer();
 });
 
 function synchroniserMise(cible) {
-  // L'apport seul représente le capital que tu aurais pu placer ailleurs —
-  // les frais et travaux sont des coûts incontournables de l'opération immobilière,
-  // pas du capital libre. La vraie comparaison est donc apport vs placement alternatif.
   const montant = Math.round(immo.apport);
   if (cible === "av") {
     av.versementInitial = montant;
@@ -391,8 +395,6 @@ function scrollVersPanneau(id) {
 // ============================================================
 
 function carteResultatHtml(cle, r) {
-  // Pour l'immobilier : multiple et mise = apport seul (cohérent avec le TRI)
-  // Pour les autres supports : miseInitiale (versement réel)
   const miseRef = cle === "immobilier" ? immo.apport : r.miseInitiale;
   const multiple = miseRef > 0 ? r.valeurFinaleNette / miseRef : null;
   const labelMise = cle === "immobilier" ? "Apport" : "Mise initiale";
@@ -666,16 +668,10 @@ document.getElementById("btnExportTout").addEventListener("click", async () => {
 // INITIALISATION
 // ============================================================
 
-// Restaurer les paramètres sauvegardés, puis recalculer
 if (restaurerParams()) {
   restaurerFormulaires();
 }
 recalculer();
-
-// Sauvegarder à chaque recalcul (déjà appelé après chaque changement)
-const _recalculerOriginal = recalculer;
-// Monkey-patch pour sauvegarder après chaque recalcul
-
 
 function afficherNotifMaj() {
   if (document.getElementById('notif-maj')) return;
