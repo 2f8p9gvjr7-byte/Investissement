@@ -302,21 +302,26 @@ function mettreAjourRegimeFiscal() {
   }
   const noteRegime = document.getElementById("note-regime");
 
-  // Section commune aux deux régimes LMNP (CFE + frais comptable) : affichée dès que
-  // le régime est Micro-BIC OU Réel, car le moteur applique ces charges aux deux
-  // (corrigé le 13/07/2026 — auparavant rattachée à tort au seul Réel, donc invisible
-  // et non modifiable en Micro-BIC alors qu'appliquée silencieusement par le moteur).
+  // Section commune aux deux régimes LMNP (CFE, montant + son taux de croissance) : affichée
+  // dès que le régime est Micro-BIC OU Réel, car le moteur applique la CFE aux deux.
   const sectionCommun = document.getElementById("section-lmnp-commun");
+  const sectionCommunTaux = document.getElementById("section-lmnp-commun-taux");
   if (sectionCommun) sectionCommun.style.display = estLmnp ? "block" : "none";
+  if (sectionCommunTaux) sectionCommunTaux.style.display = estLmnp ? "block" : "none";
 
+  // Frais comptable (montant + taux de croissance) et amortissements : réservés au Réel.
+  const sectionComptable = document.getElementById("section-lmnp-comptable");
+  const sectionComptableTaux = document.getElementById("section-lmnp-comptable-taux");
   const sectionReel = document.getElementById("section-lmnp-reel");
+  if (sectionComptable) sectionComptable.style.display = reel ? "block" : "none";
+  if (sectionComptableTaux) sectionComptableTaux.style.display = reel ? "block" : "none";
   if (sectionReel) sectionReel.style.display = reel ? "block" : "none";
 
   if (noteRegime) {
     if (reel) {
       noteRegime.innerHTML = `LMNP Réel&nbsp;: toutes charges déductibles (entretien, taxe, PNO, CFE, comptable, intérêts) + amortissements du bien, travaux et mobilier. Bénéfice imposable = MAX(loyers − tout, 0). Taux = votre TMI + ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. ⚠️ À la revente, amortissements cumulés réintégrés dans la plus-value (réforme 15/02/2025).`;
     } else if (lmnp) {
-      noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement (CFE et frais comptable restent toutefois payés et impactent le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2026&nbsp;: 83&nbsp;600&nbsp;€ de recettes annuelles.`;
+      noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement (CFE reste toutefois payée et impacte le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2025+&nbsp;: 77&nbsp;700&nbsp;€ de recettes annuelles (au-delà, régime réel applicable de plein droit).`;
     } else {
       noteRegime.innerHTML = `Location nue&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Saisissez votre taux global IR&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS dans le champ "Taux d'impôt".`;
     }

@@ -71,7 +71,66 @@
               </select>
             </label>
           </div>
-          <div class="section-grille" style="margin-top:10px">
+          <div id="note-regime" class="note-fiscale" style="margin-top:8px"></div>
+        </div>
+
+        <div class="section-bloc">
+          <div class="section-titre">Acquisition &amp; financement</div>
+          <div class="section-grille">
+            <label class="champ"><span class="champ-label">Prix du bien</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_prixBien" value="200000" step="1000"><span class="champ-suffix">€</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Apport</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_apport" value="40000" step="1000"><span class="champ-suffix">€</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Frais d'acquisition</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisAcquisitionPct" value="8" step="0.1"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Travaux initiaux</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_travauxInitiaux" value="5000" step="500"><span class="champ-suffix">€</span></div>
+            </label>
+            <label class="champ" style="grid-column: 1 / -1;"><span class="champ-label">Montant emprunté <button type="button" class="btn-recalc" id="btnRecalcEmprunt" title="Recalculer automatiquement : coût total (bien + frais + travaux) − apport">↺ auto</button></span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantEmprunte" value="181000" step="1000"><span class="champ-suffix">€</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Taux du crédit</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCredit" value="3.5" step="0.05"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Durée du crédit</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureeCredit" value="20" step="1"><span class="champ-suffix">ans</span></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="section-bloc">
+          <div class="section-titre">Recettes</div>
+          <div class="section-grille">
+            <label class="champ"><span class="champ-label">Loyer annuel initial</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_loyerAnnuelInitial" value="9600" step="100"><span class="champ-suffix">€</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Vacance locative <span style="color:var(--mut);font-weight:400">(%/an)</span></span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_vacancePct" value="0" step="0.5" min="0" max="100"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Vacance locative <span style="color:var(--mut);font-weight:400">(mois/an)</span></span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_vacanceMois" value="0" step="0.5" min="0" max="12"><span class="champ-suffix">mois</span></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="section-bloc">
+          <div class="section-titre">Charges</div>
+          <div class="section-grille">
+            <label class="champ"><span class="champ-label">Entretien initial</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_chargesEntretienInitial" value="1200" step="100"><span class="champ-suffix">€</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Taxe foncière initiale</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_taxeFonciereInitiale" value="900" step="50"><span class="champ-suffix">€</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Assurance PNO (€/an)</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_assurancePno" value="0" step="10"><span class="champ-suffix">€</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Taux d'impôt (loyers)</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxImpot" value="30" step="0.1"><span class="champ-suffix">%</span></div>
+            </label>
             <label class="champ"><span class="champ-label">PS location nue</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxPSnue" value="17.2" step="0.1" min="0" max="30"><span class="champ-suffix">%</span></div>
             </label>
@@ -80,35 +139,68 @@
             </label>
           </div>
 
-          <!-- Champs communs aux DEUX régimes LMNP (Micro-BIC et Réel) : CFE et frais comptable
-               s'appliquent quel que soit le mode d'imposition choisi dès lors qu'il s'agit de LMNP.
-               Anciennement rattachés à tort à la seule section "LMNP Réel" (masqués et donc non
-               saisissables en Micro-BIC alors que le moteur les appliquait déjà silencieusement
-               avec leur valeur par défaut) — corrigé le 13/07/2026. -->
+          <!-- Champs communs aux DEUX régimes LMNP (Micro-BIC et Réel) -->
           <div id="section-lmnp-commun" style="display:none; margin-top:12px">
-            <div class="section-titre" style="margin-bottom:8px">Charges LMNP communes (Micro-BIC et Réel)</div>
             <div class="section-grille">
               <label class="champ"><span class="champ-label">CFE (€/an)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_cfe" value="200" step="10"><span class="champ-suffix">€</span></div>
               </label>
-              <label class="champ"><span class="champ-label">Croissance CFE</span>
-                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceCfe" value="2" step="0.1"><span class="champ-suffix">%</span></div>
-              </label>
             </div>
             <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
-              La CFE est due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité). Elle évolue avec son propre taux de croissance annuel.
+              CFE due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité).
             </div>
           </div>
 
-          <div id="section-lmnp-reel" style="display:none; margin-top:12px">
-            <div class="section-titre" style="margin-bottom:8px">Paramètres LMNP Réel — amortissements et comptabilité</div>
+          <!-- Champ spécifique au Réel (nécessite un expert-comptable) -->
+          <div id="section-lmnp-comptable" style="display:none; margin-top:12px">
             <div class="section-grille">
               <label class="champ"><span class="champ-label">Frais comptable (€/an)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisComptable" value="400" step="50"><span class="champ-suffix">€</span></div>
               </label>
+            </div>
+            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
+              Réservés au Réel — le Micro-BIC est un régime déclaratif simplifié qui ne nécessite pas d'expert-comptable.
+            </div>
+          </div>
+        </div>
+
+        <div class="section-bloc">
+          <div class="section-titre">Taux de progression et de rendement</div>
+          <div class="section-grille">
+            <label class="champ"><span class="champ-label">Croissance du loyer</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceLoyer" value="1.5" step="0.1"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Croissance entretien</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceCharges" value="2" step="0.1"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Croissance taxe</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceTaxe" value="2" step="0.1"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">Progression valeur bien</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxProgressionValeur" value="2" step="0.1"><span class="champ-suffix">%</span></div>
+            </label>
+          </div>
+
+          <div id="section-lmnp-commun-taux" style="display:none; margin-top:12px">
+            <div class="section-grille">
+              <label class="champ"><span class="champ-label">Croissance CFE</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceCfe" value="2" step="0.1"><span class="champ-suffix">%</span></div>
+              </label>
+            </div>
+          </div>
+          <div id="section-lmnp-comptable-taux" style="display:none; margin-top:12px">
+            <div class="section-grille">
               <label class="champ"><span class="champ-label">Croissance frais comptable</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceComptable" value="2" step="0.1"><span class="champ-suffix">%</span></div>
               </label>
+            </div>
+          </div>
+        </div>
+
+        <div id="section-lmnp-reel" style="display:none">
+          <div class="section-bloc">
+            <div class="section-titre">Amortissements — LMNP Réel uniquement</div>
+            <div class="section-grille">
               <label class="champ"><span class="champ-label">Quote-part terrain (%)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_quotepartTerrain" value="15" step="1" min="0" max="40"><span class="champ-suffix">%</span></div>
               </label>
@@ -126,94 +218,8 @@
               </label>
             </div>
             <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
-              Frais comptable réservés au Réel (le Micro-BIC ne nécessite pas d'expert-comptable). À la revente, seuls les amortissements du bâti et des travaux sont réintégrés dans la plus-value — le mobilier en est exclu.
+              À la revente, seul l'amortissement du bâti est réintégré dans la plus-value — travaux et mobilier en sont exclus (art. 84 LF2025, CGI art. 150 VB III).
             </div>
-          </div>
-
-          <div id="note-regime" class="note-fiscale" style="margin-top:8px"></div>
-        </div>
-
-        <div class="section-bloc">
-          <div class="section-titre">Acquisition</div>
-          <div class="section-grille">
-            <label class="champ"><span class="champ-label">Prix du bien</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_prixBien" value="200000" step="1000"><span class="champ-suffix">€</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Apport</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_apport" value="40000" step="1000"><span class="champ-suffix">€</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Frais d'acquisition</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisAcquisitionPct" value="8" step="0.1"><span class="champ-suffix">%</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Travaux initiaux</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_travauxInitiaux" value="5000" step="500"><span class="champ-suffix">€</span></div>
-            </label>
-          </div>
-        </div>
-
-        <div class="section-bloc">
-          <div class="section-titre">Crédit</div>
-          <div class="section-grille">
-            <label class="champ" style="grid-column: 1 / -1;"><span class="champ-label">Montant emprunté <button type="button" class="btn-recalc" id="btnRecalcEmprunt" title="Recalculer automatiquement : coût total (bien + frais + travaux) − apport">↺ auto</button></span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantEmprunte" value="181000" step="1000"><span class="champ-suffix">€</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Taux du crédit</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCredit" value="3.5" step="0.05"><span class="champ-suffix">%</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Durée du crédit</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureeCredit" value="20" step="1"><span class="champ-suffix">ans</span></div>
-            </label>
-          </div>
-        </div>
-
-        <div class="section-bloc">
-          <div class="section-titre">Revenus locatifs</div>
-          <div class="section-grille">
-            <label class="champ"><span class="champ-label">Loyer annuel initial</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_loyerAnnuelInitial" value="9600" step="100"><span class="champ-suffix">€</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Croissance du loyer</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceLoyer" value="1.5" step="0.1"><span class="champ-suffix">%</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Vacance locative <span style="color:var(--mut);font-weight:400">(%/an)</span></span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_vacancePct" value="0" step="0.5" min="0" max="100"><span class="champ-suffix">%</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Vacance locative <span style="color:var(--mut);font-weight:400">(mois/an)</span></span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_vacanceMois" value="0" step="0.5" min="0" max="12"><span class="champ-suffix">mois</span></div>
-            </label>
-          </div>
-        </div>
-
-        <div class="section-bloc">
-          <div class="section-titre">Charges & fiscalité</div>
-          <div class="section-grille">
-            <label class="champ"><span class="champ-label">Entretien initial</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_chargesEntretienInitial" value="1200" step="100"><span class="champ-suffix">€</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Croissance entretien</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceCharges" value="2" step="0.1"><span class="champ-suffix">%</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Taxe foncière initiale</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_taxeFonciereInitiale" value="900" step="50"><span class="champ-suffix">€</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Croissance taxe</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxCroissanceTaxe" value="2" step="0.1"><span class="champ-suffix">%</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Assurance PNO (€/an)</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_assurancePno" value="0" step="10"><span class="champ-suffix">€</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">Taux d'impôt (loyers)</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxImpot" value="30" step="0.1"><span class="champ-suffix">%</span></div>
-            </label>
-          </div>
-        </div>
-
-        <div class="section-bloc">
-          <div class="section-titre">Valeur terminale</div>
-          <div class="section-grille">
-            <label class="champ"><span class="champ-label">Progression valeur bien</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxProgressionValeur" value="2" step="0.1"><span class="champ-suffix">%</span></div>
-            </label>
           </div>
         </div>
 
