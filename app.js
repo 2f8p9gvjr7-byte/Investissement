@@ -293,12 +293,13 @@ function recalculerMontantEmprunteAuto() {
 function mettreAjourRegimeFiscal() {
   const lmnp = immo.regimeFiscal === "lmnp-microbic";
   const reel = immo.regimeFiscal === "lmnp-reel";
+  const nueMicro = immo.regimeFiscal === "nu-micro";
   const estLmnp = lmnp || reel;
 
   const labelImpot = document.querySelector("label[for='immo_tauxImpot'] .champ-label, #immo_tauxImpot")
     ?.closest("label")?.querySelector(".champ-label");
   if (labelImpot) {
-    labelImpot.textContent = estLmnp ? "Taux marginal d'IR (TMI)" : "Taux d'impôt (loyers)";
+    labelImpot.textContent = "Taux marginal d'IR (TMI)";
   }
   const noteRegime = document.getElementById("note-regime");
 
@@ -322,8 +323,10 @@ function mettreAjourRegimeFiscal() {
       noteRegime.innerHTML = `LMNP Réel&nbsp;: toutes charges déductibles (entretien, taxe, PNO, CFE, comptable, intérêts) + amortissements du bien, travaux et mobilier. Bénéfice imposable = MAX(loyers − tout, 0). Taux = votre TMI + ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. ⚠️ À la revente, amortissements cumulés réintégrés dans la plus-value (réforme 15/02/2025).`;
     } else if (lmnp) {
       noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement (CFE reste toutefois payée et impacte le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2025+&nbsp;: 77&nbsp;700&nbsp;€ de recettes annuelles (au-delà, régime réel applicable de plein droit).`;
+    } else if (nueMicro) {
+      noteRegime.innerHTML = `Location nue \u2014 Micro-foncier&nbsp;: abattement forfaitaire 30&nbsp;% sur le loyer. Charges non déductibles fiscalement (elles restent payées et impactent le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS. Applicable de plein droit si les recettes ne dépassent pas 15&nbsp;000&nbsp;€/an (au-delà, régime réel applicable de plein droit).`;
     } else {
-      noteRegime.innerHTML = `Location nue&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Taux = votre TMI (champ "Taux d'impôt", à saisir seul, sans y ajouter les PS)&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS ajoutés automatiquement.`;
+      noteRegime.innerHTML = `Location nue \u2014 Réel foncier&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Taux = votre TMI&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS ajoutés automatiquement.`;
     }
   }
 }

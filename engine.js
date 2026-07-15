@@ -199,8 +199,20 @@ function calculerImmobilier(p, dureeAnalyse) {
       impot = revenuImposable * (p.tauxImpot + tauxPS);
       cashFlow = loyer - charges - taxe - pno - cfe - cpta - impot - annuiteCredit;
 
+    } else if (p.regimeFiscal === "nu-micro") {
+      // Location nue — Micro-foncier : abattement forfaitaire 30 %, charges NON déductibles
+      // fiscalement (même logique que le Micro-BIC, mais pour les revenus fonciers). Applicable
+      // de plein droit si les recettes ne dépassent pas 15 000 €/an (au-delà, régime réel
+      // applicable de plein droit). Ajouté le 15/07/2026.
+      revenuImposable = loyer * 0.70;
+      const tauxPSnueMicro = p.tauxPSnue !== undefined ? p.tauxPSnue : 0.172;
+      impot = revenuImposable * (p.tauxImpot + tauxPSnueMicro);
+      // Charges réellement payées (non déductibles) soustraites du cash-flow
+      cashFlow = loyer - charges - taxe - pno - impot - annuiteCredit;
+
     } else {
-      // Location nue : entretien + taxe + PNO + intérêts déductibles (pas CFE, pas comptable, pas amort)
+      // Location nue — régime réel foncier : entretien + taxe + PNO + intérêts déductibles
+      // (pas CFE, pas comptable, pas amort)
       // Corrigé le 15/07/2026 — bug présent depuis l'origine du fichier : les prélèvements sociaux
       // (tauxPSnue, 17,2 % par défaut) n'étaient jamais ajoutés au TMI dans le calcul de l'impôt,
       // contrairement à ce qu'indique la note affichée à l'écran ("TMI + 17,2 % PS").
