@@ -323,7 +323,7 @@ function mettreAjourRegimeFiscal() {
     } else if (lmnp) {
       noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement (CFE reste toutefois payée et impacte le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2025+&nbsp;: 77&nbsp;700&nbsp;€ de recettes annuelles (au-delà, régime réel applicable de plein droit).`;
     } else {
-      noteRegime.innerHTML = `Location nue&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Saisissez votre taux global IR&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS dans le champ "Taux d'impôt".`;
+      noteRegime.innerHTML = `Location nue&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Taux = votre TMI (champ "Taux d'impôt", à saisir seul, sans y ajouter les PS)&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS ajoutés automatiquement.`;
     }
   }
 }

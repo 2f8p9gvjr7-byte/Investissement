@@ -201,8 +201,12 @@ function calculerImmobilier(p, dureeAnalyse) {
 
     } else {
       // Location nue : entretien + taxe + PNO + intérêts déductibles (pas CFE, pas comptable, pas amort)
+      // Corrigé le 15/07/2026 — bug présent depuis l'origine du fichier : les prélèvements sociaux
+      // (tauxPSnue, 17,2 % par défaut) n'étaient jamais ajoutés au TMI dans le calcul de l'impôt,
+      // contrairement à ce qu'indique la note affichée à l'écran ("TMI + 17,2 % PS").
       revenuImposable = Math.max(loyer - charges - taxe - pno - dataCredit.interetsAnnee, 0);
-      impot = revenuImposable * p.tauxImpot;
+      const tauxPSnue = p.tauxPSnue !== undefined ? p.tauxPSnue : 0.172;
+      impot = revenuImposable * (p.tauxImpot + tauxPSnue);
       cashFlow = loyer - charges - taxe - pno - impot - annuiteCredit;
     }
 
@@ -240,18 +244,16 @@ function calculerImmobilier(p, dureeAnalyse) {
   let plusValueBrute, fiscalitePV;
 
   if (p.regimeFiscal === "lmnp-reel") {
-    // LMNP Réel (réforme 15/02/2025, art. 84 LF2025) : les amortissements CUMULÉS DES SEULS
-    // COMPOSANTS IMMOBILIERS (bâti + travaux immobilisés) sont réintégrés dans la plus-value —
-    // le mobilier en est exclu (doctrine administrative, notice 2048-IMM). Les majorations
-    // forfaitaires 7,5%/15% restent utilisables normalement (comparées au réel), calculées sur
-    // le prix d'acquisition initial, indépendamment des amortissements pratiqués (clarification
-    // administrative de mars 2025 : les forfaits s'appliquent AVANT réintégration des amortissements).
-    // Corrigé le 13/07/2026 — le mobilier était auparavant inclus à tort dans la réintégration,
-    // et les frais/travaux "retenus" (auto le plus avantageux) n'étaient pas utilisés ici.
+    // LMNP Réel (réforme LF2025, art. 84, en vigueur depuis le 15/02/2025) : seul l'amortissement
+    // du BÂTI est réintégré dans la plus-value. Sont explicitement EXCLUS de la réintégration :
+    // - l'amortissement des travaux de construction/reconstruction/agrandissement/amélioration
+    //   (exclusion prévue par l'article 84 lui-même : ces amortissements ne minorent pas le prix
+    //   d'acquisition retenu pour le calcul de la plus-value) ;
+    // - le mobilier (doctrine administrative — composant non immobilier).
+    // Les majorations forfaitaires 7,5%/15% restent utilisables normalement (comparées au réel),
+    // calculées sur le prix d'acquisition initial. Corrigé le 13/07/2026.
     const valeurAmortBien = p.prixBien * (1 - (p.quotepartTerrain || 0));
-    const amortCumulBien   = Math.min(dureeAnalyse, p.dureAmortBien   || 30) * (valeurAmortBien / (p.dureAmortBien || 30));
-    const amortCumulTravaux = Math.min(dureeAnalyse, p.dureAmortTravaux || 12) * (p.travauxInitiaux / (p.dureAmortTravaux || 12));
-    const amortCumulReintegre = amortCumulBien + amortCumulTravaux; // mobilier exclu
+    const amortCumulReintegre = Math.min(dureeAnalyse, p.dureAmortBien || 30) * (valeurAmortBien / (p.dureAmortBien || 30));
     const prixAcquisitionFiscalReduit = prixAcquisitionMajore - amortCumulReintegre;
     plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionFiscalReduit, 0);
     fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
