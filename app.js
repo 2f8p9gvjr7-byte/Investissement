@@ -114,7 +114,7 @@ const etf = {
 };
 
 const av = {
-  versementInitial: 61000, rendementAnnuelBrut: 0.035, fraisGestionAnnuels: 0.008,
+  versementInitial: 61000, fraisEntree: 0, rendementAnnuelBrut: 0.035, fraisGestionAnnuels: 0.008,
   abattementAnnuel: 4600,
 };
 
@@ -196,6 +196,7 @@ function genererFormulaireAv(data) {
       <div class="section-titre">Versement</div>
       <div class="section-grille">
         ${champHtml("av_versementInitial", "Versement initial", data.versementInitial, "€", 1000)}
+        ${champHtml("av_fraisEntree", "Frais sur versement", (data.fraisEntree * 100).toFixed(2), "%", 0.1)}
       </div>
     </div>
     <div class="section-bloc">
@@ -212,7 +213,7 @@ function genererFormulaireAv(data) {
       </div>
     </div>
     <div class="note-fiscale">
-      Rachat total simulé à la durée choisie. Avant 8 ans : 31,4&nbsp;% PFU (12,8&nbsp;% IR + 18,6&nbsp;% PS) sans abattement. Après 8 ans : abattement annuel sur les gains (4&nbsp;600&nbsp;€ pour une personne seule, 9&nbsp;200&nbsp;€ pour un couple), puis 7,5&nbsp;% IR + 18,6&nbsp;% PS (les PS s'appliquent toujours sur la totalité des gains, sans abattement). Taux PS 2026 selon LFSS 2026 (loi n° 2025-1403).
+      Rachat total simulé à la durée choisie. Les frais sur versement (aussi appelés frais d'entrée) sont prélevés immédiatement sur chaque versement, avant capitalisation : environ 40&nbsp;% des contrats (surtout en ligne) n'en appliquent aucun, un tiers se situent entre 0,1&nbsp;% et 2&nbsp;%, et certains contrats bancaires traditionnels facturent encore 3&nbsp;% à plus de 4&nbsp;%. Ils réduisent le capital réellement investi mais pas la base de calcul du gain taxable (calculé sur le montant versé, frais compris). Avant 8 ans : 31,4&nbsp;% PFU (12,8&nbsp;% IR + 18,6&nbsp;% PS) sans abattement. Après 8 ans : abattement annuel sur les gains (4&nbsp;600&nbsp;€ pour une personne seule, 9&nbsp;200&nbsp;€ pour un couple), puis 7,5&nbsp;% IR + 18,6&nbsp;% PS (les PS s'appliquent toujours sur la totalité des gains, sans abattement). Taux PS 2026 selon LFSS 2026 (loi n° 2025-1403).
       <div class="detail-fiscal-chiffre" id="detailFiscalAv"></div>
     </div>`;
 }
@@ -230,7 +231,7 @@ const PCT_FIELDS = new Set([
   "fraisAcquisitionPct", "tauxCroissanceLoyer", "tauxCroissanceCharges", "tauxCroissanceTaxe",
   "tauxImpot", "tauxCredit", "tauxProgressionValeur",
   "rendementAnnuelInitial", "tauxCroissanceRendement", "tauxImpotRevenu", "tauxImpotPlusValue",
-  "rendementAnnuelBrut", "fraisGestionAnnuels",
+  "rendementAnnuelBrut", "fraisGestionAnnuels", "fraisEntree",
   "tauxIRplusvalue", "tauxPSplusvalue",
   "tauxPSnue", "tauxPSlmnp",
   "quotepartTerrain",
@@ -351,17 +352,9 @@ document.getElementById("btnRecalcEmprunt").addEventListener("click", recalculer
 // ------------------------------------------------------------
 // Vacance locative — deux champs équivalents (% ou mois/an),
 // synchronisés l'un sur l'autre. CORRECTIF 16/07/2026 :
-// auparavant, chaque listener remettait systématiquement l'AUTRE
-// champ à 0, y compris quand la valeur saisie était vide/nulle
-// (ex: en effaçant le champ % pour ne garder que "mois"). Résultat :
-// l'utilisateur perdait silencieusement sa saisie sur l'autre champ,
-// et la vacance locative retombait à 0 % sans que rien ne le signale
-// à l'écran (les deux champs affichaient 0, cohérents entre eux, mais
-// faux par rapport à l'intention de l'utilisateur).
-// Désormais, on ne réinitialise l'autre champ que lorsque la valeur
-// saisie est strictement positive, c'est-à-dire quand l'utilisateur
-// bascule activement sur ce mode de saisie. Vider un champ (valeur 0
-// ou vide) ne touche plus plus à l'autre champ.
+// on ne réinitialise l'autre champ que lorsque la valeur saisie
+// est strictement positive, pour ne pas écraser une saisie en
+// cours quand l'utilisateur vide temporairement un champ.
 // ------------------------------------------------------------
 document.getElementById("immo_vacancePct").addEventListener("input", (e) => {
   const pct = parseFloat(e.target.value) || 0;
@@ -565,7 +558,11 @@ function rendreDetailFiscalImmo(r) {
 }
 
 function rendreDetailFiscalAv(r) {
-  const html = `
+  let html = "";
+  if (r.montantFraisEntree > 0) {
+    html += `<span>Frais sur versement : ${fmtPct(r.fraisEntreePct)} (${fmtEUR(r.montantFraisEntree)}) — capital réellement investi : <strong>${fmtEUR(r.capitalInvesti)}</strong></span>`;
+  }
+  html += `
     <span>Valeur brute du contrat : <strong>${fmtEUR(r.valeurFinaleBrute)}</strong></span>
     <span>Gains réalisés : ${fmtEUR(r.gainsFinaux)}</span>
     <span>Abattement appliqué : ${fmtEUR(r.abattementApplique)}</span>

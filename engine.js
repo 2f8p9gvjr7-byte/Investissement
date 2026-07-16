@@ -430,18 +430,35 @@ function calculerImpotAssuranceVie(gains, dureeDetention, abattement) {
 }
 
 function calculerAssuranceVie(p, dureeAnalyse) {
+  // Frais sur versement (frais d'entrée) : prélevés immédiatement sur le versement initial,
+  // avant toute capitalisation. Très variables selon les contrats — environ 40 % des contrats
+  // (essentiellement en ligne) n'en appliquent aucun, un tiers se situent entre 0,1 % et 2 %,
+  // et certains contrats bancaires traditionnels facturent encore 3 % à plus de 4 %.
+  // Ajouté le 16/07/2026.
+  const fraisEntreePct = p.fraisEntree || 0;
+  const montantFraisEntree = p.versementInitial * fraisEntreePct;
+  // Capital réellement investi et mis en capitalisation, net des frais d'entrée.
+  const capitalInvesti = p.versementInitial - montantFraisEntree;
+
   const rendementNetFrais = p.rendementAnnuelBrut - p.fraisGestionAnnuels;
-  const courbeValeurNette = [{ an: 0, valeur: 0 }];
   const detailAnnuel = [];
-  let valeurContrat = p.versementInitial;
+  // À l'an 0, les frais d'entrée sont une perte immédiate et certaine (contrairement au reste de
+  // la mise, qui demeure investie) : on l'expose dès le premier point de la courbe plutôt que de
+  // partir de 0, pour un graphique de comparaison fidèle dès le départ.
+  const courbeValeurNette = [{ an: 0, valeur: -montantFraisEntree }];
+  let valeurContrat = capitalInvesti;
 
   for (let an = 1; an <= dureeAnalyse; an++) {
     valeurContrat *= (1 + rendementNetFrais);
+    // Les gains taxables se calculent, comme en pratique fiscale, par rapport au total des
+    // primes VERSÉES par le souscripteur (montant brut, frais d'entrée compris) et non par
+    // rapport au seul capital investi : les frais d'entrée réduisent donc le gain final réalisé,
+    // mais n'ouvrent droit à aucune déduction fiscale supplémentaire.
     const gainsLatents = valeurContrat - p.versementInitial;
     const { impot } = calculerImpotAssuranceVie(gainsLatents, an, p.abattementAnnuel);
     detailAnnuel.push({ an, valeurContrat, gainsLatents, impotSiSortie: impot });
-    // Gain net par rapport à la mise, à date t = gain latent net d'impôt (la mise n'est ni gagnée ni perdue,
-    // elle reste intégralement dans le contrat ; cohérent avec valeurFinaleNette - miseInitiale calculé plus bas)
+    // Gain net par rapport à la mise, à date t = gain latent net d'impôt (la mise, hors frais
+    // d'entrée déjà comptabilisés à l'an 0, reste intégralement dans le contrat)
     courbeValeurNette.push({ an, valeur: gainsLatents - impot });
   }
 
@@ -460,6 +477,7 @@ function calculerAssuranceVie(p, dureeAnalyse) {
     flux: fluxFinal,
     detailAnnuel,
     courbeValeurNette,
+    fraisEntreePct, montantFraisEntree, capitalInvesti,
     valeurFinaleBrute,
     gainsFinaux,
     impotFinal, impotIR, impotPS,
