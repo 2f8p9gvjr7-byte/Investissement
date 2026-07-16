@@ -348,18 +348,37 @@ mettreAjourRegimeFiscal();
 
 document.getElementById("btnRecalcEmprunt").addEventListener("click", recalculerMontantEmprunteAuto);
 
+// ------------------------------------------------------------
+// Vacance locative — deux champs équivalents (% ou mois/an),
+// synchronisés l'un sur l'autre. CORRECTIF 16/07/2026 :
+// auparavant, chaque listener remettait systématiquement l'AUTRE
+// champ à 0, y compris quand la valeur saisie était vide/nulle
+// (ex: en effaçant le champ % pour ne garder que "mois"). Résultat :
+// l'utilisateur perdait silencieusement sa saisie sur l'autre champ,
+// et la vacance locative retombait à 0 % sans que rien ne le signale
+// à l'écran (les deux champs affichaient 0, cohérents entre eux, mais
+// faux par rapport à l'intention de l'utilisateur).
+// Désormais, on ne réinitialise l'autre champ que lorsque la valeur
+// saisie est strictement positive, c'est-à-dire quand l'utilisateur
+// bascule activement sur ce mode de saisie. Vider un champ (valeur 0
+// ou vide) ne touche plus plus à l'autre champ.
+// ------------------------------------------------------------
 document.getElementById("immo_vacancePct").addEventListener("input", (e) => {
   const pct = parseFloat(e.target.value) || 0;
   immo.vacancePct = pct;
-  immo.vacanceMois = 0;
-  document.getElementById("immo_vacanceMois").value = arrondi2(pct / 100 * 12);
+  if (pct > 0) {
+    immo.vacanceMois = 0;
+    document.getElementById("immo_vacanceMois").value = 0;
+  }
   recalculer();
 });
 document.getElementById("immo_vacanceMois").addEventListener("input", (e) => {
   const mois = parseFloat(e.target.value) || 0;
   immo.vacanceMois = mois;
-  immo.vacancePct = 0;
-  document.getElementById("immo_vacancePct").value = arrondi2(mois / 12 * 100);
+  if (mois > 0) {
+    immo.vacancePct = 0;
+    document.getElementById("immo_vacancePct").value = 0;
+  }
   recalculer();
 });
 
