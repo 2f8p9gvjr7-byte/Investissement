@@ -20,6 +20,15 @@ function fmtPctPdf(v) {
   return nettoyerPourPdf(fmtPct(v));
 }
 
+// Renvoie le champ de detailAnnuel à utiliser pour la colonne "Déficit reporté"
+// selon le régime fiscal (foncier pour la Location nue au Réel, BIC pour le LMNP Réel,
+// aucun mécanisme de report pour le Micro-foncier et le Micro-BIC). Ajouté le 16/07/2026.
+function champDeficitPourRegime(params) {
+  if (params.regimeFiscal === "nu") return "deficitReporteFoncier";
+  if (params.regimeFiscal === "lmnp-reel") return "deficitReporteLmnp";
+  return null;
+}
+
 const PDF_COULEURS = {
   immobilier: [0.961, 0.647, 0.141],   // ambre
   action: [0.290, 0.871, 0.502],        // vert
@@ -97,7 +106,8 @@ function dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat) {
   // Régime fiscal
   const regimeLabel = params.regimeFiscal === "lmnp-reel" ? "LMNP Réel (amortissements + charges)"
     : params.regimeFiscal === "lmnp-microbic" ? "LMNP Micro-BIC (abattement 50 %)"
-    : "Location nue (revenus fonciers)";
+    : params.regimeFiscal === "nu-micro" ? "Location nue — Micro-foncier (abattement 30 %)"
+    : "Location nue — Réel foncier (revenus fonciers)";
   dessinerLigneCleVal(page, fonts, 48, y, "Régime fiscal locatif", regimeLabel); y -= 14;
   dessinerLigneCleVal(page, fonts, 48, y, "Loyer annuel initial / croissance", fmtEURPdf(params.loyerAnnuelInitial) + "  /  " + fmtPctPdf(params.tauxCroissanceLoyer) + " par an"); y -= 14;
   const tauxVacance = (params.vacancePct > 0) ? params.vacancePct / 100 : (params.vacanceMois / 12);
@@ -120,6 +130,19 @@ function dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat) {
   if (resultat.van !== undefined) {
     dessinerLigneCleVal(page, fonts, 48, y, "VAN au taux d'actualisation choisi", fmtEURPdf(resultat.van)); y -= 14;
     dessinerLigneCleVal(page, fonts, 48, y, "Valeur future (VAN capitalisée)", fmtEURPdf(resultat.valeurFutureVAN)); y -= 14;
+  }
+
+  // Déficit reporté restant en fin de période (Location nue au Réel ou LMNP Réel uniquement) :
+  // permet de vérifier pourquoi l'impôt annuel peut rester nul sans que ce soit un crédit d'impôt
+  // sur le revenu global (cf. LMNP) — le solde correspond à des charges/amortissements en attente
+  // d'imputation sur des bénéfices futurs. Ajouté le 16/07/2026.
+  const champDeficit = champDeficitPourRegime(params);
+  if (champDeficit && resultat.detailAnnuel && resultat.detailAnnuel.length > 0) {
+    const derniereAnnee = resultat.detailAnnuel[resultat.detailAnnuel.length - 1];
+    const solde = derniereAnnee[champDeficit] || 0;
+    if (solde > 1) {
+      dessinerLigneCleVal(page, fonts, 48, y, "Déficit reporté restant en fin de période", fmtEURPdf(solde)); y -= 14;
+    }
   }
   y -= 6;
 
@@ -279,6 +302,31 @@ function dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonn
   dessinerPiedDePage(page, fonts, largeur);
 }
 
+// Construit les colonnes du tableau annuel Immobilier, avec la colonne "Déficit reporté"
+// insérée juste après "Impôt" quand le régime dispose d'un mécanisme de report (Location nue
+// au Réel ou LMNP Réel). Factorisé pour rester identique entre exporterPdfImmobilier et
+// exporterPdfGlobal. Ajouté le 16/07/2026.
+function colonnesTableauImmo(params) {
+  const colonnes = [
+    { label: "Année", format: (l) => l.an },
+    { label: "Loyer", format: (l) => fmtEURPdf(l.loyer) },
+    { label: "Charges", format: (l) => fmtEURPdf(l.charges) },
+    { label: "Taxe", format: (l) => fmtEURPdf(l.taxe) },
+    { label: "Impôt", format: (l) => fmtEURPdf(l.impot) },
+  ];
+  const champDeficit = champDeficitPourRegime(params);
+  if (champDeficit) {
+    colonnes.push({ label: "Déficit reporté", format: (l) => fmtEURPdf(l[champDeficit] || 0) });
+  }
+  colonnes.push(
+    { label: "Annuité crédit", format: (l) => fmtEURPdf(l.annuiteCredit) },
+    { label: "Cash-flow", format: (l) => fmtEURPdf(l.cashFlow) },
+    { label: "Capital restant", format: (l) => fmtEURPdf(l.capitalRestant) },
+    { label: "Équité nette", format: (l) => fmtEURPdf(l.equiteAn) },
+  );
+  return colonnes;
+}
+
 // ============================================================
 // FONCTIONS PUBLIQUES D'EXPORT (un PDF par support)
 // ============================================================
@@ -289,19 +337,7 @@ async function exporterPdfImmobilier(params, resultat, dureeAnalyse) {
   const fonts = await chargerPolicesPdf(pdfDoc);
 
   dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat);
-
-  const colonnes = [
-    { label: "Année", format: (l) => l.an },
-    { label: "Loyer", format: (l) => fmtEURPdf(l.loyer) },
-    { label: "Charges", format: (l) => fmtEURPdf(l.charges) },
-    { label: "Taxe", format: (l) => fmtEURPdf(l.taxe) },
-    { label: "Impôt", format: (l) => fmtEURPdf(l.impot) },
-    { label: "Annuité crédit", format: (l) => fmtEURPdf(l.annuiteCredit) },
-    { label: "Cash-flow", format: (l) => fmtEURPdf(l.cashFlow) },
-    { label: "Capital restant", format: (l) => fmtEURPdf(l.capitalRestant) },
-    { label: "Équité nette", format: (l) => fmtEURPdf(l.equiteAn) },
-  ];
-  dessinerTableauAnnuel(pdfDoc, fonts, "Immobilier", PDF_COULEURS.immobilier, dureeAnalyse, colonnes, resultat.detailAnnuel);
+  dessinerTableauAnnuel(pdfDoc, fonts, "Immobilier", PDF_COULEURS.immobilier, dureeAnalyse, colonnesTableauImmo(params), resultat.detailAnnuel);
 
   return pdfDoc.save();
 }
@@ -356,17 +392,7 @@ async function exporterPdfGlobal(donnees, dureeAnalyse, tauxActualisation) {
 
   // Résumé + annexe pour chaque support, à la suite
   dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, donnees.immo.params, donnees.immo.resultat);
-  dessinerTableauAnnuel(pdfDoc, fonts, "Immobilier", PDF_COULEURS.immobilier, dureeAnalyse, [
-    { label: "Année", format: (l) => l.an },
-    { label: "Loyer", format: (l) => fmtEURPdf(l.loyer) },
-    { label: "Charges", format: (l) => fmtEURPdf(l.charges) },
-    { label: "Taxe", format: (l) => fmtEURPdf(l.taxe) },
-    { label: "Impôt", format: (l) => fmtEURPdf(l.impot) },
-    { label: "Annuité crédit", format: (l) => fmtEURPdf(l.annuiteCredit) },
-    { label: "Cash-flow", format: (l) => fmtEURPdf(l.cashFlow) },
-    { label: "Capital restant", format: (l) => fmtEURPdf(l.capitalRestant) },
-    { label: "Équité nette", format: (l) => fmtEURPdf(l.equiteAn) },
-  ], donnees.immo.resultat.detailAnnuel);
+  dessinerTableauAnnuel(pdfDoc, fonts, "Immobilier", PDF_COULEURS.immobilier, dureeAnalyse, colonnesTableauImmo(donnees.immo.params), donnees.immo.resultat.detailAnnuel);
 
   const titresMeta = [
     ["action", "Action", PDF_COULEURS.action, "Dividende"],
