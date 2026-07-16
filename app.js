@@ -93,6 +93,7 @@ const immo = {
   dureAmortBien: 30, dureAmortTravaux: 12, dureAmortMobilier: 7,
   assurancePno: 0, cfe: 200, fraisComptable: 400,
   tauxCroissanceCfe: 0.02, tauxCroissanceComptable: 0.02,
+  revenuGlobalSuffisant: "oui", plafondImputationDeficit: 10700,
   modeFraisPV: "auto", modeTravauxPV: "auto", baremePlusValueIR: "actuel",
   tauxIRplusvalue: 0.19, tauxPSplusvalue: 0.172,
 };
@@ -294,6 +295,7 @@ function mettreAjourRegimeFiscal() {
   const lmnp = immo.regimeFiscal === "lmnp-microbic";
   const reel = immo.regimeFiscal === "lmnp-reel";
   const nueMicro = immo.regimeFiscal === "nu-micro";
+  const nueReel = immo.regimeFiscal === "nu"; // Location nue — Réel foncier (valeur par défaut/historique "nu")
   const estLmnp = lmnp || reel;
 
   const labelImpot = document.querySelector("label[for='immo_tauxImpot'] .champ-label, #immo_tauxImpot")
@@ -318,6 +320,11 @@ function mettreAjourRegimeFiscal() {
   if (sectionComptableTaux) sectionComptableTaux.style.display = reel ? "block" : "none";
   if (sectionReel) sectionReel.style.display = reel ? "block" : "none";
 
+  // Déficit foncier : concerne uniquement la Location nue au Réel (seul régime où les charges
+  // réelles, dont les intérêts d'emprunt, peuvent dépasser les loyers de façon déductible).
+  const sectionDeficit = document.getElementById("section-nue-reel-deficit");
+  if (sectionDeficit) sectionDeficit.style.display = nueReel ? "block" : "none";
+
   if (noteRegime) {
     if (reel) {
       noteRegime.innerHTML = `LMNP Réel&nbsp;: toutes charges déductibles (entretien, taxe, PNO, CFE, comptable, intérêts) + amortissements du bien, travaux et mobilier. Bénéfice imposable = MAX(loyers − tout, 0). Taux = votre TMI + ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. ⚠️ À la revente, amortissements cumulés réintégrés dans la plus-value (réforme 15/02/2025).`;
@@ -326,7 +333,7 @@ function mettreAjourRegimeFiscal() {
     } else if (nueMicro) {
       noteRegime.innerHTML = `Location nue \u2014 Micro-foncier&nbsp;: abattement forfaitaire 30&nbsp;% sur le loyer. Charges non déductibles fiscalement (elles restent payées et impactent le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS. Applicable de plein droit si les recettes ne dépassent pas 15&nbsp;000&nbsp;€/an (au-delà, régime réel applicable de plein droit).`;
     } else {
-      noteRegime.innerHTML = `Location nue \u2014 Réel foncier&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Taux = votre TMI&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS ajoutés automatiquement.`;
+      noteRegime.innerHTML = `Location nue \u2014 Réel foncier&nbsp;: entretien, taxe foncière, assurance PNO et intérêts d'emprunt déductibles. Taux = votre TMI&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS ajoutés automatiquement. En cas de déficit, mécanisme d'imputation/report détaillé ci-dessous.`;
     }
   }
 }

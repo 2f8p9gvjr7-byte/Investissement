@@ -147,6 +147,11 @@ function calculerImmobilier(p, dureeAnalyse) {
   const equiteInitiale = p.prixBien - montantEmprunte;
   const courbeValeurNette = [{ an: 0, valeur: -miseInitiale + equiteInitiale }];
 
+  // Stock de déficit foncier reportable (location nue au réel uniquement) : liste d'entrées
+  // {montant, anneeOrigine}, chacune valable 10 ans, consommées en priorité (FIFO) dès qu'un
+  // résultat foncier positif est disponible. CGI art. 156 I 3°. Ajouté le 16/07/2026.
+  let stockDeficitReportable = [];
+
   // Taux de vacance : priorité au taux % s'il est non nul, sinon conversion depuis les mois/an
   const tauxVacance = (p.vacancePct !== undefined && p.vacancePct > 0)
     ? p.vacancePct / 100
@@ -212,14 +217,51 @@ function calculerImmobilier(p, dureeAnalyse) {
 
     } else {
       // Location nue — régime réel foncier : entretien + taxe + PNO + intérêts déductibles
-      // (pas CFE, pas comptable, pas amort)
-      // Corrigé le 15/07/2026 — bug présent depuis l'origine du fichier : les prélèvements sociaux
-      // (tauxPSnue, 17,2 % par défaut) n'étaient jamais ajoutés au TMI dans le calcul de l'impôt,
-      // contrairement à ce qu'indique la note affichée à l'écran ("TMI + 17,2 % PS").
-      revenuImposable = Math.max(loyer - charges - taxe - pno - dataCredit.interetsAnnee, 0);
+      // (pas CFE, pas comptable, pas amort). Corrigé le 15/07/2026 (PS manquants) et complété
+      // le 16/07/2026 avec le régime du déficit foncier (CGI art. 156 I 3°) :
+      // - le revenu brut compense en priorité les intérêts d'emprunt (jamais imputables sur le
+      //   revenu global, uniquement reportables sur les revenus fonciers des 10 années suivantes) ;
+      // - le déficit lié aux autres charges est imputable sur le revenu global du foyer dans la
+      //   limite annuelle de 10 700 € (procure une économie d'impôt immédiate au taux du TMI,
+      //   hors prélèvements sociaux) ; le surplus, comme la part liée aux intérêts, est reportable
+      //   sur les revenus fonciers des 10 années suivantes.
+      const autresCharges = charges + taxe + pno;
+      const interets = dataCredit.interetsAnnee;
+      const resultatAvantReport = loyer - autresCharges - interets;
       const tauxPSnue = p.tauxPSnue !== undefined ? p.tauxPSnue : 0.172;
-      impot = revenuImposable * (p.tauxImpot + tauxPSnue);
-      cashFlow = loyer - charges - taxe - pno - impot - annuiteCredit;
+      const plafondImputation = p.plafondImputationDeficit !== undefined ? p.plafondImputationDeficit : 10700;
+      const imputationAutorisee = p.revenuGlobalSuffisant !== "non";
+
+      // Purge des entrées de plus de 10 ans (non consommées, elles sont définitivement perdues)
+      stockDeficitReportable = stockDeficitReportable.filter((e) => an - e.anneeOrigine <= 10);
+
+      if (resultatAvantReport < 0) {
+        const deficitTotal = -resultatAvantReport;
+        const deficitInterets = Math.max(interets - loyer, 0);
+        const deficitAutresCharges = deficitTotal - deficitInterets;
+        const montantImpute = imputationAutorisee ? Math.min(deficitAutresCharges, plafondImputation) : 0;
+        const montantReporte = deficitTotal - montantImpute;
+        if (montantReporte > 0.01) stockDeficitReportable.push({ montant: montantReporte, anneeOrigine: an });
+
+        revenuImposable = 0;
+        // Économie d'impôt réelle et immédiate sur le foyer (réduit l'IR dû sur les autres revenus,
+        // jamais les prélèvements sociaux) : représentée ici par un impôt négatif (crédit).
+        impot = -(montantImpute * p.tauxImpot);
+      } else {
+        // Résultat positif : on impute d'abord le stock de déficits reportés (FIFO, les plus
+        // anciens d'abord car ce sont eux qui expirent le plus tôt), dans la limite du résultat.
+        let resultatRestant = resultatAvantReport;
+        for (const entree of stockDeficitReportable) {
+          if (resultatRestant <= 0) break;
+          const imputable = Math.min(entree.montant, resultatRestant);
+          entree.montant -= imputable;
+          resultatRestant -= imputable;
+        }
+        stockDeficitReportable = stockDeficitReportable.filter((e) => e.montant > 0.01);
+        revenuImposable = resultatRestant;
+        impot = revenuImposable * (p.tauxImpot + tauxPSnue);
+      }
+      cashFlow = loyer - autresCharges - impot - annuiteCredit;
     }
 
     flux.push(cashFlow);

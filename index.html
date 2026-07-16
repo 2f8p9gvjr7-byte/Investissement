@@ -198,6 +198,26 @@
           </div>
         </div>
 
+        <div id="section-nue-reel-deficit" style="display:none; margin-top:12px">
+          <div class="section-bloc">
+            <div class="section-titre">Déficit foncier — Location nue au Réel uniquement</div>
+            <div class="section-grille">
+              <label class="champ"><span class="champ-label">Autres revenus du foyer suffisants pour imputer le déficit ?</span>
+                <select class="champ-input mono" id="immo_revenuGlobalSuffisant">
+                  <option value="oui" selected>Oui (cas le plus fréquent)</option>
+                  <option value="non">Non</option>
+                </select>
+              </label>
+              <label class="champ"><span class="champ-label">Plafond d'imputation annuelle sur le revenu global</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_plafondImputationDeficit" value="10700" step="100"><span class="champ-suffix">€</span></div>
+              </label>
+            </div>
+            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
+              CGI art. 156 I 3°. Le revenu brut compense en priorité les intérêts d'emprunt : la part de déficit qui leur est liée n'est jamais imputable sur le revenu global, seulement reportable sur les revenus fonciers des 10 années suivantes. La part liée aux autres charges (entretien, taxe, PNO) est imputable sur le revenu global dans la limite ci-dessus, le surplus étant lui aussi reporté 10 ans. Le plafond de 10 700 € est fixé par la loi et peut évoluer : il est donc modifiable ici plutôt que figé dans le calcul.
+            </div>
+          </div>
+        </div>
+
         <div id="section-lmnp-reel" style="display:none">
           <div class="section-bloc">
             <div class="section-titre">Amortissements — LMNP Réel uniquement</div>
