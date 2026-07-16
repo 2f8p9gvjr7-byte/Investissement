@@ -305,9 +305,16 @@ function calculerImmobilier(p, dureeAnalyse) {
     const fiscaliteAn = calculerImpotPlusValueImmo(plusValueBruteAn, an, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
     const equiteAn = equiteAnBrute - fiscaliteAn.total;
 
+    // Stock de déficit reporté restant en fin d'année, exposé pour l'affichage/export (PDF, etc.) —
+    // permet de vérifier pourquoi l'impôt reste nul alors que des amortissements/charges ont été
+    // déduits : ils ne sont pas "perdus", ils restent en attente d'imputation future. Ajouté le 16/07/2026.
+    const deficitReporteFoncier = stockDeficitReportable.reduce((s, e) => s + e.montant, 0);
+    const deficitReporteLmnp = stockDeficitLmnp.reduce((s, e) => s + e.montant, 0);
+
     detailAnnuel.push({
       an, loyer, charges, taxe, impot, annuiteCredit,
-      capitalRestant: dataCredit.capitalRestant, cashFlow, equiteAn
+      capitalRestant: dataCredit.capitalRestant, cashFlow, equiteAn,
+      deficitReporteFoncier, deficitReporteLmnp,
     });
     // Gain net par rapport à la mise, à date t = -mise + cash-flows cumulés + équité actuelle dans le bien
     // (cohérent avec valeurFinaleNette = -mise + cashFlows + équité finale, calculé plus bas)
