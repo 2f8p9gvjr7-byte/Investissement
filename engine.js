@@ -152,6 +152,11 @@ function calculerImmobilier(p, dureeAnalyse) {
   // résultat foncier positif est disponible. CGI art. 156 I 3°. Ajouté le 16/07/2026.
   let stockDeficitReportable = [];
 
+  // Stock de déficit LMNP Réel reportable : même logique de file d'attente sur 10 ans, mais
+  // JAMAIS imputable sur le revenu global (CGI art. 156, I-1° ter) — uniquement sur les
+  // bénéfices BIC futurs de cette même activité de location meublée. Ajouté le 16/07/2026.
+  let stockDeficitLmnp = [];
+
   // Taux de vacance : priorité au taux % s'il est non nul, sinon conversion depuis les mois/an
   const tauxVacance = (p.vacancePct !== undefined && p.vacancePct > 0)
     ? p.vacancePct / 100
@@ -196,11 +201,31 @@ function calculerImmobilier(p, dureeAnalyse) {
       cashFlow = loyer - charges - taxe - pno - cfe - cpta - impot - annuiteCredit;
 
     } else if (p.regimeFiscal === "lmnp-reel") {
-      // LMNP Réel : charges complètes + amortissements déductibles
-      // Bénéfice imposable = MAX(loyer - tout, 0) — déficit non imputable sur revenu global
+      // LMNP Réel : charges complètes + amortissements déductibles.
+      // Déficit non imputable sur le revenu global (CGI art. 156, I-1° ter) — mais reportable
+      // sur les bénéfices BIC futurs de cette même activité, pendant 10 ans (FIFO).
+      // Corrigé le 16/07/2026 : le report n'était pas implémenté, chaque année repartait de
+      // zéro sans tenir compte des déficits non consommés des années précédentes.
       const chargesDeductibles = charges + taxe + pno + cfe + cpta + dataCredit.interetsAnnee + amortTotal;
-      revenuImposable = Math.max(loyer - chargesDeductibles, 0);
-      const tauxPS = p.tauxPSlmnp !== undefined ? p.tauxPSlmnp : 0.172;
+      const resultatAvantReportLmnp = loyer - chargesDeductibles;
+      const tauxPS = p.tauxPSlmnp !== undefined ? p.tauxPSlmnp : 0.186;
+
+      stockDeficitLmnp = stockDeficitLmnp.filter((e) => an - e.anneeOrigine <= 10);
+
+      if (resultatAvantReportLmnp < 0) {
+        stockDeficitLmnp.push({ montant: -resultatAvantReportLmnp, anneeOrigine: an });
+        revenuImposable = 0;
+      } else {
+        let resultatRestant = resultatAvantReportLmnp;
+        for (const entree of stockDeficitLmnp) {
+          if (resultatRestant <= 0) break;
+          const imputable = Math.min(entree.montant, resultatRestant);
+          entree.montant -= imputable;
+          resultatRestant -= imputable;
+        }
+        stockDeficitLmnp = stockDeficitLmnp.filter((e) => e.montant > 0.01);
+        revenuImposable = resultatRestant;
+      }
       impot = revenuImposable * (p.tauxImpot + tauxPS);
       cashFlow = loyer - charges - taxe - pno - cfe - cpta - impot - annuiteCredit;
 
