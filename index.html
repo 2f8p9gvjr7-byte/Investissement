@@ -139,15 +139,6 @@
             <label class="champ"><span class="champ-label">Assurance PNO (€/an)</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_assurancePno" value="0" step="10"><span class="champ-suffix">€</span></div>
             </label>
-            <label class="champ"><span class="champ-label">Taux d'impôt (loyers)</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxImpot" value="30" step="0.1"><span class="champ-suffix">%</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">PS location nue</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxPSnue" value="17.2" step="0.1" min="0" max="30"><span class="champ-suffix">%</span></div>
-            </label>
-            <label class="champ"><span class="champ-label">PS LMNP Micro-BIC / Réel</span>
-              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxPSlmnp" value="18.6" step="0.1" min="0" max="30"><span class="champ-suffix">%</span></div>
-            </label>
           </div>
 
           <!-- Champs communs aux DEUX régimes LMNP (Micro-BIC et Réel) : CFE (charge annuelle) et
@@ -155,7 +146,8 @@
                réservée au Réel — car il doit être financé dans les deux régimes LMNP ; seul son
                AMORTISSEMENT fiscal (durée, section ci-dessous) est spécifique au Réel.
                Corrigé le 17/07/2026 : le mobilier était auparavant absent du plan de financement.
-               Réorganisé le 18/07/2026 : tous les champs de charges regroupés, notes déplacées en fin de section. -->
+               Réorganisé le 18/07/2026 : charges réelles regroupées ici, taux d'imposition (TMI, PS)
+               déplacés dans leur propre section "Fiscalité", notes en fin de section. -->
           <div id="section-lmnp-commun" style="display:none; margin-top:12px">
             <div class="section-grille">
               <label class="champ"><span class="champ-label">CFE (€/an)</span>
@@ -186,6 +178,21 @@
             <div class="note-fiscale" style="font-size:0.85em">
               Frais comptable réservés au Réel — le Micro-BIC est un régime déclaratif simplifié qui ne nécessite pas d'expert-comptable.
             </div>
+          </div>
+        </div>
+
+        <div class="section-bloc">
+          <div class="section-titre">Fiscalité — taux d'imposition</div>
+          <div class="section-grille">
+            <label class="champ"><span class="champ-label">Taux d'impôt (loyers)</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxImpot" value="30" step="0.1"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">PS location nue</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxPSnue" value="17.2" step="0.1" min="0" max="30"><span class="champ-suffix">%</span></div>
+            </label>
+            <label class="champ"><span class="champ-label">PS LMNP Micro-BIC / Réel</span>
+              <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxPSlmnp" value="18.6" step="0.1" min="0" max="30"><span class="champ-suffix">%</span></div>
+            </label>
           </div>
         </div>
 
