@@ -317,8 +317,10 @@ function mettreAjourRegimeFiscal() {
   // dès que le régime est Micro-BIC OU Réel, car le moteur applique la CFE aux deux.
   const sectionCommun = document.getElementById("section-lmnp-commun");
   const sectionCommunTaux = document.getElementById("section-lmnp-commun-taux");
+  const sectionMobilier = document.getElementById("section-lmnp-mobilier");
   if (sectionCommun) sectionCommun.style.display = estLmnp ? "block" : "none";
   if (sectionCommunTaux) sectionCommunTaux.style.display = estLmnp ? "block" : "none";
+  if (sectionMobilier) sectionMobilier.style.display = estLmnp ? "block" : "none";
 
   // Frais comptable (montant + taux de croissance) et amortissements : réservés au Réel.
   const sectionComptable = document.getElementById("section-lmnp-comptable");

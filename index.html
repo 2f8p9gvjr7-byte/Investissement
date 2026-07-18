@@ -100,6 +100,23 @@
             <label class="champ"><span class="champ-label">Travaux initiaux</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_travauxInitiaux" value="5000" step="500"><span class="champ-suffix">€</span></div>
             </label>
+          </div>
+
+          <!-- Mobilier / équipements : investissement initial amortissable (comme les travaux),
+               PAS une charge annuelle — déplacé depuis "Charges" le 18/07/2026. Uniquement en LMNP
+               (Micro-BIC ou Réel) : la location nue n'a par définition pas de mobilier à financer. -->
+          <div id="section-lmnp-mobilier" style="display:none; margin-top:12px">
+            <div class="section-grille">
+              <label class="champ"><span class="champ-label">Mobilier / équipements (€)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantMobilier" value="5000" step="500"><span class="champ-suffix">€</span></div>
+              </label>
+            </div>
+            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
+              Investissement initial nécessaire à la qualification « meublé », financé comme le bien (il augmente donc le montant emprunté) — que son amortissement soit ensuite déductible (Réel) ou non (Micro-BIC).
+            </div>
+          </div>
+
+          <div class="section-grille" style="margin-top:12px">
             <label class="champ" style="grid-column: 1 / -1;"><span class="champ-label">Montant emprunté <button type="button" class="btn-recalc" id="btnRecalcEmprunt" title="Recalculer automatiquement : coût total (bien + frais + travaux + mobilier si meublé) − apport">↺ auto</button></span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantEmprunte" value="181000" step="1000"><span class="champ-suffix">€</span></div>
             </label>
@@ -153,9 +170,6 @@
               <label class="champ"><span class="champ-label">CFE (€/an)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_cfe" value="200" step="10"><span class="champ-suffix">€</span></div>
               </label>
-              <label class="champ"><span class="champ-label">Mobilier / équipements (€)</span>
-                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantMobilier" value="5000" step="500"><span class="champ-suffix">€</span></div>
-              </label>
             </div>
           </div>
 
@@ -171,7 +185,7 @@
           <!-- Notes explicatives, regroupées après tous les champs de charges -->
           <div id="section-lmnp-commun-note" style="display:none; margin-top:10px">
             <div class="note-fiscale" style="font-size:0.85em">
-              CFE due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité). Le mobilier est une dépense réelle nécessaire à la qualification « meublé » : il est financé comme le bien (il augmente donc le montant emprunté), que son amortissement soit ensuite déductible (Réel) ou non (Micro-BIC).
+              CFE due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité).
             </div>
           </div>
           <div id="section-lmnp-comptable-note" style="display:none; margin-top:6px">
