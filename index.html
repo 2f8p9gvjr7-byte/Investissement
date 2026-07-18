@@ -154,7 +154,8 @@
                mobilier (coût de financement initial). Le mobilier est ici — et non dans la section
                réservée au Réel — car il doit être financé dans les deux régimes LMNP ; seul son
                AMORTISSEMENT fiscal (durée, section ci-dessous) est spécifique au Réel.
-               Corrigé le 17/07/2026 : le mobilier était auparavant absent du plan de financement. -->
+               Corrigé le 17/07/2026 : le mobilier était auparavant absent du plan de financement.
+               Réorganisé le 18/07/2026 : tous les champs de charges regroupés, notes déplacées en fin de section. -->
           <div id="section-lmnp-commun" style="display:none; margin-top:12px">
             <div class="section-grille">
               <label class="champ"><span class="champ-label">CFE (€/an)</span>
@@ -163,9 +164,6 @@
               <label class="champ"><span class="champ-label">Mobilier / équipements (€)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantMobilier" value="5000" step="500"><span class="champ-suffix">€</span></div>
               </label>
-            </div>
-            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
-              CFE due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité). Le mobilier est une dépense réelle nécessaire à la qualification « meublé » : il est financé comme le bien (il augmente donc le montant emprunté), que son amortissement soit ensuite déductible (Réel) ou non (Micro-BIC).
             </div>
           </div>
 
@@ -176,8 +174,17 @@
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_fraisComptable" value="400" step="50"><span class="champ-suffix">€</span></div>
               </label>
             </div>
-            <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
-              Réservés au Réel — le Micro-BIC est un régime déclaratif simplifié qui ne nécessite pas d'expert-comptable.
+          </div>
+
+          <!-- Notes explicatives, regroupées après tous les champs de charges -->
+          <div id="section-lmnp-commun-note" style="display:none; margin-top:10px">
+            <div class="note-fiscale" style="font-size:0.85em">
+              CFE due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité). Le mobilier est une dépense réelle nécessaire à la qualification « meublé » : il est financé comme le bien (il augmente donc le montant emprunté), que son amortissement soit ensuite déductible (Réel) ou non (Micro-BIC).
+            </div>
+          </div>
+          <div id="section-lmnp-comptable-note" style="display:none; margin-top:6px">
+            <div class="note-fiscale" style="font-size:0.85em">
+              Frais comptable réservés au Réel — le Micro-BIC est un régime déclaratif simplifié qui ne nécessite pas d'expert-comptable.
             </div>
           </div>
         </div>

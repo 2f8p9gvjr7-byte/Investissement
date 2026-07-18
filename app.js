@@ -328,6 +328,13 @@ function mettreAjourRegimeFiscal() {
   if (sectionComptableTaux) sectionComptableTaux.style.display = reel ? "block" : "none";
   if (sectionReel) sectionReel.style.display = reel ? "block" : "none";
 
+  // Notes explicatives (regroupées en fin de section "Charges") : suivent la même
+  // condition d'affichage que leur section de champs respective. Ajouté le 18/07/2026.
+  const sectionCommunNote = document.getElementById("section-lmnp-commun-note");
+  const sectionComptableNote = document.getElementById("section-lmnp-comptable-note");
+  if (sectionCommunNote) sectionCommunNote.style.display = estLmnp ? "block" : "none";
+  if (sectionComptableNote) sectionComptableNote.style.display = reel ? "block" : "none";
+
   // Déficit foncier : concerne uniquement la Location nue au Réel (seul régime où les charges
   // réelles, dont les intérêts d'emprunt, peuvent dépasser les loyers de façon déductible).
   const sectionDeficit = document.getElementById("section-nue-reel-deficit");
