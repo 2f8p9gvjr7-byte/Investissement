@@ -33,7 +33,13 @@ function tableauAmortissement(capital, tauxAnnuel, dureeCreditAnnees, dureeAnaly
   return { mensualite, parAn };
 }
 
-function calculerSurtaxePlusValueElevee(plusValueNetteIR) {
+// Surtaxe sur les plus-values immobilières élevées (CGI art. 1609 nonies G) — barème vérifié
+// ligne à ligne le 18/07/2026 contre le barème officiel par tranches. Le paramètre `active`
+// permet de désactiver tout le mécanisme (hypothèse d'abrogation ou de réforme future) sans
+// toucher au code, sur le même principe que l'option "barème réforme 17 ans" déjà proposée
+// pour l'abattement pour durée de détention.
+function calculerSurtaxePlusValueElevee(plusValueNetteIR, active = true) {
+  if (!active) return 0;
   const pv = plusValueNetteIR;
   if (pv <= 50000) return 0;
   if (pv <= 60000) return 0.02 * pv - (60000 - pv) * (1 / 20);
@@ -49,7 +55,7 @@ function calculerSurtaxePlusValueElevee(plusValueNetteIR) {
 }
 
 // Calcule l'impôt sur la plus-value immobilière (investissement locatif, barème en vigueur).
-function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention, bareme = "actuel", tauxIR = 0.19, tauxPS = 0.172) {
+function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention, bareme = "actuel", tauxIR = 0.19, tauxPS = 0.172, surtaxeActive = true) {
   if (plusValueBrute <= 0) {
     return { impotIR: 0, impotPS: 0, surtaxe: 0, total: 0, abattementIR: 0, abattementPS: 0 };
   }
@@ -97,15 +103,22 @@ function calculerImpotPlusValueImmo(plusValueBrute, dureeDetention, bareme = "ac
 
   const impotIR = baseIR * tauxIR;
   const impotPS = basePS * tauxPS;
-  const surtaxe = calculerSurtaxePlusValueElevee(baseIR);
+  const surtaxe = calculerSurtaxePlusValueElevee(baseIR, surtaxeActive);
 
   return { impotIR, impotPS, surtaxe, total: impotIR + impotPS + surtaxe, abattementIR, abattementPS };
 }
 
 function calculerImmobilier(p, dureeAnalyse) {
   const fraisAcquisition = p.prixBien * p.fraisAcquisitionPct;
-  const miseInitiale = p.apport + fraisAcquisition + p.travauxInitiaux;
-  const coutTotalOperation = p.prixBien + fraisAcquisition + p.travauxInitiaux;
+  // Le mobilier n'est un coût de financement réel qu'en location meublée (LMNP), quel que soit
+  // le régime fiscal choisi (Micro-BIC ou Réel) : il faut l'acheter pour qualifier le bien de
+  // "meublé", même si seul le régime réel permet ensuite de l'amortir fiscalement. En location
+  // nue (micro-foncier ou réel foncier), il n'y a par définition pas de mobilier à financer.
+  // Corrigé le 17/07/2026 : ce coût était auparavant totalement absent du plan de financement.
+  const estMeuble = p.regimeFiscal === "lmnp-reel" || p.regimeFiscal === "lmnp-microbic";
+  const coutMobilierFinance = estMeuble ? (p.montantMobilier || 0) : 0;
+  const miseInitiale = p.apport + fraisAcquisition + p.travauxInitiaux + coutMobilierFinance;
+  const coutTotalOperation = p.prixBien + fraisAcquisition + p.travauxInitiaux + coutMobilierFinance;
   // Montant emprunté : paramétrable directement (p.montantEmprunte), sinon calculé par défaut
   // comme le solde à financer une fois l'apport déduit du coût total (bien + frais + travaux).
   const montantEmprunte = Math.max(
@@ -302,7 +315,7 @@ function calculerImmobilier(p, dureeAnalyse) {
     // dans le prix majoré, on retient le plus avantageux entre réel et forfait fiscal.
     const prixAcquisitionMajoreAn = p.prixBien + fraisRetenusPourPV + travauxRetenusPourPV(an);
     const plusValueBruteAn = Math.max(valeurBienAn - prixAcquisitionMajoreAn, 0);
-    const fiscaliteAn = calculerImpotPlusValueImmo(plusValueBruteAn, an, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
+    const fiscaliteAn = calculerImpotPlusValueImmo(plusValueBruteAn, an, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172, p.surtaxeActive !== "non");
     const equiteAn = equiteAnBrute - fiscaliteAn.total;
 
     // Stock de déficit reporté restant en fin d'année, exposé pour l'affichage/export (PDF, etc.) —
@@ -312,7 +325,7 @@ function calculerImmobilier(p, dureeAnalyse) {
     const deficitReporteLmnp = stockDeficitLmnp.reduce((s, e) => s + e.montant, 0);
 
     detailAnnuel.push({
-      an, loyer, charges, taxe, impot, annuiteCredit,
+      an, loyer, charges, taxe, pno, impot, annuiteCredit,
       capitalRestant: dataCredit.capitalRestant, cashFlow, equiteAn,
       deficitReporteFoncier, deficitReporteLmnp,
     });
@@ -342,10 +355,10 @@ function calculerImmobilier(p, dureeAnalyse) {
     const amortCumulReintegre = Math.min(dureeAnalyse, p.dureAmortBien || 30) * (valeurAmortBien / (p.dureAmortBien || 30));
     const prixAcquisitionFiscalReduit = prixAcquisitionMajore - amortCumulReintegre;
     plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionFiscalReduit, 0);
-    fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
+    fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172, p.surtaxeActive !== "non");
   } else {
     plusValueBrute = Math.max(valeurFutureBien - prixAcquisitionMajore, 0);
-    fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172);
+    fiscalitePV = calculerImpotPlusValueImmo(plusValueBrute, dureeAnalyse, p.baremePlusValueIR, p.tauxIRplusvalue || 0.19, p.tauxPSplusvalue || 0.172, p.surtaxeActive !== "non");
   }
 
   const equiteNetteFinale = equiteNetteBrute - fiscalitePV.total;

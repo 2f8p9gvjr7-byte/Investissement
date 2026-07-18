@@ -95,7 +95,7 @@ const immo = {
   tauxCroissanceCfe: 0.02, tauxCroissanceComptable: 0.02,
   revenuGlobalSuffisant: "oui", plafondImputationDeficit: 10700,
   modeFraisPV: "auto", modeTravauxPV: "auto", baremePlusValueIR: "actuel",
-  tauxIRplusvalue: 0.19, tauxPSplusvalue: 0.172,
+  tauxIRplusvalue: 0.19, tauxPSplusvalue: 0.172, surtaxeActive: "oui",
 };
 
 const action = {
@@ -280,12 +280,19 @@ document.getElementById("tauxActualisation").addEventListener("input", (e) => {
 // BOUTON "SYNCHRONISER" — recopie la mise totale immobilière
 // ============================================================
 
+// Coût du mobilier réellement à financer : uniquement en LMNP (Micro-BIC ou Réel), jamais en
+// location nue. Voir engine.js pour le détail du raisonnement. Corrigé le 17/07/2026.
+function coutMobilierAFinancer() {
+  const estMeuble = immo.regimeFiscal === "lmnp-reel" || immo.regimeFiscal === "lmnp-microbic";
+  return estMeuble ? (immo.montantMobilier || 0) : 0;
+}
+
 function miseTotaleImmobiliere() {
-  return immo.apport + immo.prixBien * immo.fraisAcquisitionPct + immo.travauxInitiaux;
+  return immo.apport + immo.prixBien * immo.fraisAcquisitionPct + immo.travauxInitiaux + coutMobilierAFinancer();
 }
 
 function recalculerMontantEmprunteAuto() {
-  const coutTotal = immo.prixBien + immo.prixBien * immo.fraisAcquisitionPct + immo.travauxInitiaux;
+  const coutTotal = immo.prixBien + immo.prixBien * immo.fraisAcquisitionPct + immo.travauxInitiaux + coutMobilierAFinancer();
   const montant = Math.max(Math.round(coutTotal - immo.apport), 0);
   immo.montantEmprunte = montant;
   document.getElementById("immo_montantEmprunte").value = montant;
@@ -328,9 +335,9 @@ function mettreAjourRegimeFiscal() {
 
   if (noteRegime) {
     if (reel) {
-      noteRegime.innerHTML = `LMNP Réel&nbsp;: toutes charges déductibles (entretien, taxe, PNO, CFE, comptable, intérêts) + amortissements du bien, travaux et mobilier. Bénéfice imposable = MAX(loyers − tout, 0). Taux = votre TMI + ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. ⚠️ À la revente, amortissements cumulés réintégrés dans la plus-value (réforme 15/02/2025).`;
+      noteRegime.innerHTML = `LMNP Réel&nbsp;: toutes charges déductibles (entretien, taxe, PNO, CFE, comptable, intérêts) + amortissements du bien, travaux et mobilier. Bénéfice imposable = MAX(loyers − tout, 0). Taux = votre TMI + ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. ⚠️ À la revente, amortissements cumulés réintégrés dans la plus-value (réforme 15/02/2025). ⚠️ Le mobilier est financé comme le bien : pense à recliquer sur « ↺ auto » (montant emprunté) après avoir saisi son coût.`;
     } else if (lmnp) {
-      noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement (CFE reste toutefois payée et impacte le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2025+&nbsp;: 77&nbsp;700&nbsp;€ de recettes annuelles (au-delà, régime réel applicable de plein droit).`;
+      noteRegime.innerHTML = `LMNP Micro-BIC&nbsp;: abattement forfaitaire 50&nbsp;% sur les loyers. Charges non déductibles fiscalement (CFE reste toutefois payée et impacte le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSlmnp * 100).toFixed(1).replace('.', ',')} % PS. Seuil 2025+&nbsp;: 77&nbsp;700&nbsp;€ de recettes annuelles (au-delà, régime réel applicable de plein droit). ⚠️ Le mobilier est financé comme le bien : pense à recliquer sur « ↺ auto » (montant emprunté) après avoir saisi son coût.`;
     } else if (nueMicro) {
       noteRegime.innerHTML = `Location nue \u2014 Micro-foncier&nbsp;: abattement forfaitaire 30&nbsp;% sur le loyer. Charges non déductibles fiscalement (elles restent payées et impactent le cash-flow). Taux = votre TMI&nbsp;+ ${(immo.tauxPSnue * 100).toFixed(1).replace('.', ',')} % PS. Applicable de plein droit si les recettes ne dépassent pas 15&nbsp;000&nbsp;€/an (au-delà, régime réel applicable de plein droit).`;
     } else {
@@ -375,8 +382,12 @@ document.getElementById("immo_vacanceMois").addEventListener("input", (e) => {
   recalculer();
 });
 
-function synchroniserMise(cible) {
-  const montant = Math.round(immo.apport);
+// ------------------------------------------------------------
+// Synchronisation de l'apport vers les 4 supports financiers, en un seul clic
+// (auparavant 4 boutons séparés, un par panneau — fusionnés le 17/07/2026
+// suite à un retour utilisateur : un seul geste doit suffire).
+// ------------------------------------------------------------
+function appliquerMiseSupport(cible, montant) {
   if (cible === "av") {
     av.versementInitial = montant;
     document.getElementById("av_versementInitial").value = montant;
@@ -385,12 +396,16 @@ function synchroniserMise(cible) {
     data.miseInitiale = montant;
     document.getElementById(`${cible}_miseInitiale`).value = montant;
   }
+}
+
+function synchroniserMiseTout() {
+  const montant = Math.round(immo.apport);
+  ["action", "obligation", "etf", "av"].forEach((cible) => appliquerMiseSupport(cible, montant));
   recalculer();
 }
 
-document.querySelectorAll(".btn-sync").forEach((btn) => {
-  btn.addEventListener("click", () => synchroniserMise(btn.dataset.target));
-});
+const btnSyncTout = document.getElementById("btnSyncTout");
+if (btnSyncTout) btnSyncTout.addEventListener("click", synchroniserMiseTout);
 
 // ============================================================
 // EN-TÊTE STICKY — pastilles TRI

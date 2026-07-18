@@ -91,7 +91,7 @@
             <label class="champ"><span class="champ-label">Prix du bien</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_prixBien" value="200000" step="1000"><span class="champ-suffix">€</span></div>
             </label>
-            <label class="champ"><span class="champ-label">Apport</span>
+            <label class="champ"><span class="champ-label">Apport <button type="button" class="btn-recalc" id="btnSyncTout" title="Recopie cet apport comme mise initiale dans les 4 supports financiers (Action, Obligation, ETF, Assurance-vie)">⇄ ×4 supports</button></span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_apport" value="40000" step="1000"><span class="champ-suffix">€</span></div>
             </label>
             <label class="champ"><span class="champ-label">Frais d'acquisition</span>
@@ -100,7 +100,7 @@
             <label class="champ"><span class="champ-label">Travaux initiaux</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_travauxInitiaux" value="5000" step="500"><span class="champ-suffix">€</span></div>
             </label>
-            <label class="champ" style="grid-column: 1 / -1;"><span class="champ-label">Montant emprunté <button type="button" class="btn-recalc" id="btnRecalcEmprunt" title="Recalculer automatiquement : coût total (bien + frais + travaux) − apport">↺ auto</button></span>
+            <label class="champ" style="grid-column: 1 / -1;"><span class="champ-label">Montant emprunté <button type="button" class="btn-recalc" id="btnRecalcEmprunt" title="Recalculer automatiquement : coût total (bien + frais + travaux + mobilier si meublé) − apport">↺ auto</button></span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantEmprunte" value="181000" step="1000"><span class="champ-suffix">€</span></div>
             </label>
             <label class="champ"><span class="champ-label">Taux du crédit</span>
@@ -150,15 +150,22 @@
             </label>
           </div>
 
-          <!-- Champs communs aux DEUX régimes LMNP (Micro-BIC et Réel) -->
+          <!-- Champs communs aux DEUX régimes LMNP (Micro-BIC et Réel) : CFE (charge annuelle) et
+               mobilier (coût de financement initial). Le mobilier est ici — et non dans la section
+               réservée au Réel — car il doit être financé dans les deux régimes LMNP ; seul son
+               AMORTISSEMENT fiscal (durée, section ci-dessous) est spécifique au Réel.
+               Corrigé le 17/07/2026 : le mobilier était auparavant absent du plan de financement. -->
           <div id="section-lmnp-commun" style="display:none; margin-top:12px">
             <div class="section-grille">
               <label class="champ"><span class="champ-label">CFE (€/an)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_cfe" value="200" step="10"><span class="champ-suffix">€</span></div>
               </label>
+              <label class="champ"><span class="champ-label">Mobilier / équipements (€)</span>
+                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantMobilier" value="5000" step="500"><span class="champ-suffix">€</span></div>
+              </label>
             </div>
             <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
-              CFE due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité).
+              CFE due dans les deux régimes LMNP (taxe professionnelle indépendante du mode de comptabilité). Le mobilier est une dépense réelle nécessaire à la qualification « meublé » : il est financé comme le bien (il augmente donc le montant emprunté), que son amortissement soit ensuite déductible (Réel) ou non (Micro-BIC).
             </div>
           </div>
 
@@ -235,9 +242,6 @@
               <label class="champ"><span class="champ-label">Quote-part terrain (%)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_quotepartTerrain" value="15" step="1" min="0" max="40"><span class="champ-suffix">%</span></div>
               </label>
-              <label class="champ"><span class="champ-label">Mobilier / équipements (€)</span>
-                <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_montantMobilier" value="5000" step="500"><span class="champ-suffix">€</span></div>
-              </label>
               <label class="champ"><span class="champ-label">Durée amort. bien (ans)</span>
                 <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureAmortBien" value="30" step="1" min="1" max="50"><span class="champ-suffix">ans</span></div>
               </label>
@@ -249,7 +253,7 @@
               </label>
             </div>
             <div class="note-fiscale" style="margin-top:6px; font-size:0.85em">
-              À la revente, seul l'amortissement du bâti est réintégré dans la plus-value — travaux et mobilier en sont exclus (art. 84 LF2025, CGI art. 150 VB III).
+              Le montant du mobilier à amortir se saisit plus haut (section commune aux deux régimes LMNP), puisqu'il doit être financé qu'il soit ou non amortissable fiscalement. À la revente, seul l'amortissement du bâti est réintégré dans la plus-value — travaux et mobilier en sont exclus (art. 84 LF2025, CGI art. 150 VB III).
             </div>
           </div>
         </div>
@@ -283,6 +287,12 @@
             <label class="champ"><span class="champ-label">Taux prélèvements sociaux</span>
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_tauxPSplusvalue" value="17.2" step="0.1" min="0" max="100"><span class="champ-suffix">%</span></div>
             </label>
+            <label class="champ" style="grid-column: 1 / -1;"><span class="champ-label">Surtaxe plus-values élevées (&gt; 50 000 €)</span>
+              <select class="champ-input mono" id="immo_surtaxeActive">
+                <option value="oui" selected>Active (barème en vigueur, CGI art. 1609 nonies G)</option>
+                <option value="non">Désactivée (hypothèse d'abrogation)</option>
+              </select>
+            </label>
           </div>
         </div>
 
@@ -299,7 +309,6 @@
       <div class="panneau-head">
         <span class="panneau-titre">Action</span>
         <div class="boutons-head">
-          <button class="btn-sync" data-target="action" title="Recopie l'apport immobilier — le capital que tu aurais pu placer ailleurs">⇄ Synchroniser</button>
           <button class="btn-pdf" data-support="action" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
         </div>
       </div>
@@ -311,7 +320,6 @@
       <div class="panneau-head">
         <span class="panneau-titre">Obligation</span>
         <div class="boutons-head">
-          <button class="btn-sync" data-target="obligation" title="Recopie l'apport immobilier — le capital que tu aurais pu placer ailleurs">⇄ Synchroniser</button>
           <button class="btn-pdf" data-support="obligation" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
         </div>
       </div>
@@ -323,7 +331,6 @@
       <div class="panneau-head">
         <span class="panneau-titre">ETF</span>
         <div class="boutons-head">
-          <button class="btn-sync" data-target="etf" title="Recopie l'apport immobilier — le capital que tu aurais pu placer ailleurs">⇄ Synchroniser</button>
           <button class="btn-pdf" data-support="etf" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
         </div>
       </div>
@@ -335,7 +342,6 @@
       <div class="panneau-head">
         <span class="panneau-titre">Assurance-vie</span>
         <div class="boutons-head">
-          <button class="btn-sync" data-target="av" title="Recopie l'apport immobilier — le capital que tu aurais pu placer ailleurs">⇄ Synchroniser</button>
           <button class="btn-pdf" data-support="av" title="Exporter le détail de calcul en PDF">⬇ PDF</button>
         </div>
       </div>
