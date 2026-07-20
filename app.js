@@ -407,6 +407,31 @@ function appliquerMiseSupport(cible, montant) {
   }
 }
 
+// ------------------------------------------------------------
+// Contrôle de cohérence : le total des ressources (apport + montant emprunté)
+// doit égaler le total des besoins (prix + frais + travaux + mobilier si meublé).
+// "Montant emprunté" restant un champ librement modifiable (utile quand le prêt
+// réellement obtenu diffère légèrement du calcul théorique), rien ne garantissait
+// jusqu'ici que les deux totaux restent alignés après une saisie manuelle.
+// Ajouté le 18/07/2026.
+// ------------------------------------------------------------
+function mettreAjourBouclageFinancement() {
+  const el = document.getElementById("bouclageFinancement");
+  if (!el) return;
+  const fraisAcquisition = immo.prixBien * immo.fraisAcquisitionPct;
+  const coutTotal = immo.prixBien + fraisAcquisition + immo.travauxInitiaux + coutMobilierAFinancer();
+  const ressources = immo.apport + (immo.montantEmprunte || 0);
+  const ecart = ressources - coutTotal;
+
+  if (Math.abs(ecart) < 1) {
+    el.innerHTML = `<span style="color:#4ade80">✓ Financement équilibré</span> — Total des besoins : ${fmtEUR(coutTotal)} = Apport (${fmtEUR(immo.apport)}) + Emprunt (${fmtEUR(immo.montantEmprunte || 0)}).`;
+  } else if (ecart < 0) {
+    el.innerHTML = `<span style="color:#f87171">⚠ Financement insuffisant de ${fmtEUR(-ecart)}</span> — Total des besoins : ${fmtEUR(coutTotal)}, mais Apport + Emprunt ne couvrent que ${fmtEUR(ressources)}. Augmente l'apport, le montant emprunté, ou reclique sur « ↺ auto ».`;
+  } else {
+    el.innerHTML = `<span style="color:#fbbf24">⚠ Financement excédentaire de ${fmtEUR(ecart)}</span> — Apport + Emprunt (${fmtEUR(ressources)}) dépassent le total des besoins de ${fmtEUR(coutTotal)}. Vérifie l'apport ou le montant emprunté.`;
+  }
+}
+
 function synchroniserMiseTout() {
   const montant = Math.round(immo.apport);
   ["action", "obligation", "etf", "av"].forEach((cible) => appliquerMiseSupport(cible, montant));
@@ -650,6 +675,7 @@ function recalculer() {
   rendreDetailFiscalTitre("obligation", resultats.obligation);
   rendreDetailFiscalTitre("etf", resultats.etf);
   rendreDetailFiscalAv(resultats.av);
+  mettreAjourBouclageFinancement();
   dessinerGraphique(resultats);
   sauvegarderParams();
 }

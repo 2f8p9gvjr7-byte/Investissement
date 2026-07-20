@@ -127,6 +127,11 @@
               <div class="champ-input-wrap"><input type="number" class="champ-input mono" id="immo_dureeCredit" value="20" step="1"><span class="champ-suffix">ans</span></div>
             </label>
           </div>
+          <!-- Contrôle de cohérence besoins/ressources, mis à jour en direct à chaque saisie
+               (apport, prix, frais, travaux, mobilier ou montant emprunté). Ajouté le 18/07/2026
+               suite à un retour utilisateur : rien ne signalait auparavant un emprunt manuel
+               décorrélé du coût total réel de l'opération. -->
+          <div id="bouclageFinancement" class="note-fiscale" style="margin-top:10px"></div>
         </div>
 
         <div class="section-bloc">
