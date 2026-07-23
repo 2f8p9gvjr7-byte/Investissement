@@ -432,13 +432,21 @@ function calculerTitreFinancier(p, dureeAnalyse) {
 
 // Calcule l'impôt de sortie sur les gains d'une assurance-vie (rachat total en une fois),
 // selon le régime des versements post-27/09/2017.
-// Taux 2026 suite à la hausse de la CSG (LFSS 2026, loi n° 2025-1403 du 30/12/2025) :
-// Avant 8 ans : PFU 31,4 % (12,8 % IR + 18,6 % PS), sans abattement.
-// Après 8 ans : 7,5 % IR (au-delà d'un abattement annuel) + 18,6 % PS sur la totalité des gains.
+// Taux 2026 : la LFSS 2026 (loi n° 2025-1403 du 30/12/2025, art. 12, amendement gouvernemental
+// n°1104) relève la CSG de 9,2 % à 10,6 % sur une large part des revenus du capital (dividendes,
+// plus-values mobilières, PEA, PER, LMNP/BIC non pro...), portant leurs PS à 18,6 %. Mais les
+// produits d'assurance-vie et de capitalisation en sont EXPLICITEMENT EXCLUS : leur CSG reste à
+// 9,2 %, donc leurs PS restent à 17,2 %, comme les revenus fonciers et plus-values immobilières.
+// CORRIGÉ le 23/07/2026 (le code appliquait par erreur 18,6 % ici aussi).
+// Avant 8 ans : PFU 31,4 % (12,8 % IR + 18,6 % PS)... ERRONÉ pour l'AV : voir ci-dessous, le taux
+// PFU réel sur assurance-vie avant 8 ans est donc de 12,8 % + 17,2 % = 30 %, pas 31,4 %.
+// Après 8 ans : 7,5 % IR (au-delà d'un abattement annuel) + 17,2 % PS sur la totalité des gains
+// (les PS s'appliquent toujours sur la totalité des gains, jamais sur la part après abattement —
+// seul l'IR bénéficie de l'abattement).
 function calculerImpotAssuranceVie(gains, dureeDetention, abattement) {
   if (gains <= 0) return { impot: 0, abattementApplique: 0, impotIR: 0, impotPS: 0 };
 
-  const impotPS = gains * 0.186; // PS 2026 : 18,6% (hausse de 1,4 pt vs 17,2% jusqu'en 2025)
+  const impotPS = gains * 0.172; // PS assurance-vie 2026 : 17,2%, exclue de la hausse LFSS 2026
 
   if (dureeDetention < 8) {
     const impotIR = gains * 0.128;

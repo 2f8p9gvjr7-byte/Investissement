@@ -251,8 +251,8 @@ function dessinerResumeAv(pdfDoc, fonts, dureeAnalyse, params, resultat) {
   dessinerLigneCleVal(page, fonts, 48, y, "Total impôt à la sortie", fmtEURPdf(resultat.impotFinal)); y -= 20;
 
   const regimeTexte = dureeAnalyse < 8
-    ? "Sortie avant 8 ans : PFU 31,4 % (12,8 % IR + 18,6 % PS), sans abattement. Taux PS 2026 (LFSS 2026)."
-    : "Sortie après 8 ans : abattement annuel sur les gains, puis 7,5 % IR + 18,6 % PS (les PS s'appliquent toujours sur la totalité des gains). Taux PS 2026 (LFSS 2026).";
+    ? "Sortie avant 8 ans : PFU 30 % (12,8 % IR + 17,2 % PS), sans abattement. Assurance-vie exclue de la hausse LFSS 2026."
+    : "Sortie après 8 ans : abattement annuel sur les gains, puis 7,5 % IR + 17,2 % PS (les PS s'appliquent toujours sur la totalité des gains). Assurance-vie exclue de la hausse LFSS 2026.";
   page.drawText(regimeTexte, { x: 48, y, size: 8, font: fonts.regular, color: rgb(...PDF_COULEURS.sousTexte) });
 
   dessinerPiedDePage(page, fonts, largeur);
