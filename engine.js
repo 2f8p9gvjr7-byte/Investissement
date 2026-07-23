@@ -158,7 +158,12 @@ function calculerImmobilier(p, dureeAnalyse) {
   // Patrimoine net à l'achat (an=0) : équité initiale dans le bien (prix - dette contractée) moins la mise totale sortie.
   // Généralise correctement le cas où l'emprunt finance aussi tout ou partie des frais/travaux.
   const equiteInitiale = p.prixBien - montantEmprunte;
-  const courbeValeurNette = [{ an: 0, valeur: -miseInitiale + equiteInitiale }];
+  // CORRIGÉ le 22/07/2026 : utilise l'apport réellement sorti de la poche (p.apport), pas la
+  // miseInitiale totale (apport+frais+travaux+mobilier). Ces derniers sont financés par le crédit
+  // et déjà reflétés dans la dette (montantEmprunte) déduite de equiteInitiale/equiteAn ; les
+  // recompter en négatif ici les aurait comptés deux fois (une fois comme "dépense", une fois
+  // comme composante de la dette déduite de l'équité).
+  const courbeValeurNette = [{ an: 0, valeur: -p.apport + equiteInitiale }];
 
   // Stock de déficit foncier reportable (location nue au réel uniquement) : liste d'entrées
   // {montant, anneeOrigine}, chacune valable 10 ans, consommées en priorité (FIFO) dès qu'un
@@ -324,14 +329,18 @@ function calculerImmobilier(p, dureeAnalyse) {
     const deficitReporteFoncier = stockDeficitReportable.reduce((s, e) => s + e.montant, 0);
     const deficitReporteLmnp = stockDeficitLmnp.reduce((s, e) => s + e.montant, 0);
 
+    // Gain net cumulé par rapport à l'apport réellement sorti de la poche, à cette date précise
+    // (= "richesse créée" : valeur nette de revente à date, moins tout ce qui a été sorti de la
+    // poche depuis le début — apport initial + cash-flows négatifs cumulés). Calculé ici pour être
+    // à la fois exposé ligne par ligne (tableau annuel) et utilisé pour le graphique de comparaison.
+    const valeurNetteAn = -p.apport + cashFlowCumuleProgressif + equiteAn;
+
     detailAnnuel.push({
       an, loyer, charges, taxe, pno, impot, annuiteCredit,
       capitalRestant: dataCredit.capitalRestant, cashFlow, equiteAn,
       deficitReporteFoncier, deficitReporteLmnp,
+      richesseCreeeAn: valeurNetteAn,
     });
-    // Gain net par rapport à la mise, à date t = -mise + cash-flows cumulés + équité actuelle dans le bien
-    // (cohérent avec valeurFinaleNette = -mise + cashFlows + équité finale, calculé plus bas)
-    const valeurNetteAn = -miseInitiale + cashFlowCumuleProgressif + equiteAn;
     courbeValeurNette.push({ an, valeur: valeurNetteAn });
   }
 
@@ -368,7 +377,7 @@ function calculerImmobilier(p, dureeAnalyse) {
 
   const cashFlowCumule = flux.reduce((a, b) => a + b, 0); // inclut -miseInitiale au départ
   const gainNet = cashFlowCumule + equiteNetteFinale; // -mise + cashflows + équité finale = gain/perte net réel
-  const valeurFinaleNette = gainNet + miseInitiale; // total patrimoine final = mise + gain net
+  const valeurFinaleNette = gainNet + p.apport; // total patrimoine final = apport réellement investi + gain net (CORRIGÉ 22/07/2026 : utilisait miseInitiale, comptant deux fois frais+travaux+mobilier déjà financés par le crédit)
 
   return {
     miseInitiale, flux: fluxAvecSortie, detailAnnuel, valeurFutureBien,

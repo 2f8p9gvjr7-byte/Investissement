@@ -20,6 +20,14 @@ function fmtPctPdf(v) {
   return nettoyerPourPdf(fmtPct(v));
 }
 
+// Formate un montant SANS le symbole "€" répété à chaque cellule — utilisé dans les tableaux
+// annuels détaillés, où l'unité est indiquée une seule fois en note au-dessus du tableau.
+// Ajouté le 22/07/2026 suite à un retour utilisateur (colonnes trop chargées visuellement).
+function fmtNombrePdf(v) {
+  if (v === null || v === undefined || !isFinite(v)) return "—";
+  return nettoyerPourPdf(new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(v)));
+}
+
 // Renvoie le champ de detailAnnuel à utiliser pour la colonne "Déficit reporté"
 // selon le régime fiscal (foncier pour la Location nue au Réel, BIC pour le LMNP Réel,
 // aucun mécanisme de report pour le Micro-foncier et le Micro-BIC). Ajouté le 16/07/2026.
@@ -260,20 +268,46 @@ function dessinerPiedDePage(page, fonts, largeur) {
 // TABLEAU ANNUEL DÉTAILLÉ (annexe)
 // ============================================================
 
-function dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonnes, lignes) {
+// Chaque colonne peut désormais préciser un poids relatif (`poids`, défaut 1) utilisé pour
+// répartir la largeur disponible — la colonne "Année" utilise un poids réduit (elle n'a besoin
+// que de 2 chiffres), ce qui laisse plus de place aux colonnes monétaires. Les colonnes marquées
+// `numerique: true` sont alignées à droite, plus lisible pour comparer des montants en colonne.
+// Révisé le 22/07/2026 (largeurs resserrées, alignement à droite, unité indiquée une seule fois).
+function dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonnes, lignes, uniteNote) {
   const rgb = window.PDFLib.rgb;
   let { page, largeur } = nouvellePagePdf(pdfDoc);
   let y = dessinerEnteteSupport(page, fonts, nom + " — annexe : détail année par année", couleur, dureeAnalyse, largeur);
 
-  const nCol = colonnes.length;
-  const largeurCol = largeur / nCol;
+  if (uniteNote) {
+    page.drawText(uniteNote, { x: 48, y, size: 7.5, font: fonts.regular, color: rgb(...PDF_COULEURS.sousTexte) });
+    y -= 13;
+  }
+
+  const poidsTotal = colonnes.reduce((s, c) => s + (c.poids || 1), 0);
+  const largeursCol = colonnes.map((c) => (largeur * (c.poids || 1)) / poidsTotal);
+  const positionsX = [];
+  let cumul = 48;
+  largeursCol.forEach((l) => { positionsX.push(cumul); cumul += l; });
+
   const ligneHauteur = 13;
   const yDebutTableau = y;
+  const paddingDroite = 5;
+
+  function dessinerTexteCellule(page, texte, colIdx, yy, font, couleur) {
+    const x0 = positionsX[colIdx];
+    const w = largeursCol[colIdx];
+    if (colonnes[colIdx].numerique) {
+      const largeurTexte = font.widthOfTextAtSize(String(texte), 7.5);
+      page.drawText(String(texte), { x: x0 + w - largeurTexte - paddingDroite, y: yy, size: 7.5, font, color: couleur });
+    } else {
+      page.drawText(String(texte), { x: x0 + 3, y: yy, size: 7.5, font, color: couleur });
+    }
+  }
 
   function dessinerEnTeteColonnes(yy) {
     page.drawRectangle({ x: 48, y: yy - 3, width: largeur, height: ligneHauteur, color: rgb(0.93, 0.93, 0.95) });
     colonnes.forEach((col, i) => {
-      page.drawText(col.label, { x: 48 + i * largeurCol + 3, y: yy, size: 7.5, font: fonts.bold, color: rgb(...PDF_COULEURS.texte) });
+      dessinerTexteCellule(page, col.label, i, yy, fonts.bold, rgb(...PDF_COULEURS.texte));
     });
     return yy - ligneHauteur;
   }
@@ -287,6 +321,7 @@ function dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonn
       page = suite.page;
       largeur = suite.largeur;
       y = dessinerEnteteSupport(page, fonts, nom + " — annexe (suite)", couleur, dureeAnalyse, largeur);
+      if (uniteNote) { page.drawText(uniteNote, { x: 48, y, size: 7.5, font: fonts.regular, color: rgb(...PDF_COULEURS.sousTexte) }); y -= 13; }
       y = dessinerEnTeteColonnes(y);
     }
     if (idx % 2 === 0) {
@@ -294,7 +329,7 @@ function dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonn
     }
     colonnes.forEach((col, i) => {
       const valeur = col.format(ligne);
-      page.drawText(String(valeur), { x: 48 + i * largeurCol + 3, y, size: 7.5, font: fonts.regular, color: rgb(...PDF_COULEURS.texte) });
+      dessinerTexteCellule(page, valeur, i, y, fonts.regular, rgb(...PDF_COULEURS.texte));
     });
     y -= ligneHauteur;
   });
@@ -306,26 +341,37 @@ function dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonn
 // insérée juste après "Impôt" quand le régime dispose d'un mécanisme de report (Location nue
 // au Réel ou LMNP Réel). Factorisé pour rester identique entre exporterPdfImmobilier et
 // exporterPdfGlobal. Ajouté le 16/07/2026.
+// Révisé le 22/07/2026 : montants sans "€" répété (poids/numerique pour dessinerTableauAnnuel),
+// "Équité nette" renommée "Valeur nette de revente" (libellé jugé plus explicite, sans ambiguïté
+// avec la notion comptable d'actif), et ajout de la colonne "Richesse créée" (gain net cumulé par
+// rapport à l'apport réellement sorti de la poche, cf. richesseCreeeAn calculé dans engine.js).
+// Les poids ci-dessous sont calibrés (22/07/2026) sur la largeur réelle nécessaire à chaque
+// en-tête et à sa valeur la plus large plausible (ex. "Richesse créée" / "-15 516"), mesurée via
+// font.widthOfTextAtSize — pas des poids arbitraires. Ne pas les réduire sans revérifier qu'aucun
+// texte ne déborde de sa colonne (dessinerTableauAnnuel n'effectue aucun retour à la ligne).
 function colonnesTableauImmo(params) {
   const colonnes = [
-    { label: "Année", format: (l) => l.an },
-    { label: "Loyer", format: (l) => fmtEURPdf(l.loyer) },
-    { label: "Charges", format: (l) => fmtEURPdf(l.charges) },
-    { label: "Taxe", format: (l) => fmtEURPdf(l.taxe) },
-    { label: "Impôt", format: (l) => fmtEURPdf(l.impot) },
+    { label: "Année", format: (l) => l.an, poids: 29 },
+    { label: "Loyer", format: (l) => fmtNombrePdf(l.loyer), numerique: true, poids: 29 },
+    { label: "Charges", format: (l) => fmtNombrePdf(l.charges), numerique: true, poids: 36 },
+    { label: "Taxe", format: (l) => fmtNombrePdf(l.taxe), numerique: true, poids: 25 },
+    { label: "Impôt", format: (l) => fmtNombrePdf(l.impot), numerique: true, poids: 26 },
   ];
   const champDeficit = champDeficitPourRegime(params);
   if (champDeficit) {
-    colonnes.push({ label: "Déficit reporté", format: (l) => fmtEURPdf(l[champDeficit] || 0) });
+    colonnes.push({ label: "Déficit reporté", format: (l) => fmtNombrePdf(l[champDeficit] || 0), numerique: true, poids: 57 });
   }
   colonnes.push(
-    { label: "Annuité crédit", format: (l) => fmtEURPdf(l.annuiteCredit) },
-    { label: "Cash-flow", format: (l) => fmtEURPdf(l.cashFlow) },
-    { label: "Capital restant", format: (l) => fmtEURPdf(l.capitalRestant) },
-    { label: "Équité nette", format: (l) => fmtEURPdf(l.equiteAn) },
+    { label: "Annuité crédit", format: (l) => fmtNombrePdf(l.annuiteCredit), numerique: true, poids: 56 },
+    { label: "Cash-flow", format: (l) => fmtNombrePdf(l.cashFlow), numerique: true, poids: 42 },
+    { label: "Capital restant", format: (l) => fmtNombrePdf(l.capitalRestant), numerique: true, poids: 58 },
+    { label: "Nette revente", format: (l) => fmtNombrePdf(l.equiteAn), numerique: true, poids: 53 },
+    { label: "Richesse créée", format: (l) => fmtNombrePdf(l.richesseCreeeAn), numerique: true, poids: 61 },
   );
   return colonnes;
 }
+
+const NOTE_UNITE_EUR = "Sauf indication contraire, tous les montants sont exprimés en euros (€).";
 
 // ============================================================
 // FONCTIONS PUBLIQUES D'EXPORT (un PDF par support)
@@ -337,9 +383,27 @@ async function exporterPdfImmobilier(params, resultat, dureeAnalyse) {
   const fonts = await chargerPolicesPdf(pdfDoc);
 
   dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, params, resultat);
-  dessinerTableauAnnuel(pdfDoc, fonts, "Immobilier", PDF_COULEURS.immobilier, dureeAnalyse, colonnesTableauImmo(params), resultat.detailAnnuel);
+  dessinerTableauAnnuel(pdfDoc, fonts, "Immobilier", PDF_COULEURS.immobilier, dureeAnalyse, colonnesTableauImmo(params), resultat.detailAnnuel, NOTE_UNITE_EUR);
 
   return pdfDoc.save();
+}
+
+function colonnesTitre(labelRevenu) {
+  return [
+    { label: "Année", format: (l) => l.an, poids: 0.6 },
+    { label: labelRevenu + " brut", format: (l) => fmtNombrePdf(l.revenuBrut), numerique: true },
+    { label: "Impôt", format: (l) => fmtNombrePdf(l.impot), numerique: true },
+    { label: labelRevenu + " net", format: (l) => fmtNombrePdf(l.revenuNet), numerique: true },
+  ];
+}
+
+function colonnesAv() {
+  return [
+    { label: "Année", format: (l) => l.an, poids: 0.6 },
+    { label: "Valeur du contrat", format: (l) => fmtNombrePdf(l.valeurContrat), numerique: true },
+    { label: "Gains latents", format: (l) => fmtNombrePdf(l.gainsLatents), numerique: true },
+    { label: "Impôt si sortie", format: (l) => fmtNombrePdf(l.impotSiSortie), numerique: true },
+  ];
 }
 
 async function exporterPdfTitre(nom, couleur, params, resultat, dureeAnalyse, labelRevenu) {
@@ -348,14 +412,7 @@ async function exporterPdfTitre(nom, couleur, params, resultat, dureeAnalyse, la
   const fonts = await chargerPolicesPdf(pdfDoc);
 
   dessinerResumeTitre(pdfDoc, fonts, dureeAnalyse, nom, couleur, params, resultat, labelRevenu);
-
-  const colonnes = [
-    { label: "Année", format: (l) => l.an },
-    { label: labelRevenu + " brut", format: (l) => fmtEURPdf(l.revenuBrut) },
-    { label: "Impôt", format: (l) => fmtEURPdf(l.impot) },
-    { label: labelRevenu + " net", format: (l) => fmtEURPdf(l.revenuNet) },
-  ];
-  dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonnes, resultat.detailAnnuel);
+  dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonnesTitre(labelRevenu), resultat.detailAnnuel, NOTE_UNITE_EUR);
 
   return pdfDoc.save();
 }
@@ -366,14 +423,7 @@ async function exporterPdfAv(params, resultat, dureeAnalyse) {
   const fonts = await chargerPolicesPdf(pdfDoc);
 
   dessinerResumeAv(pdfDoc, fonts, dureeAnalyse, params, resultat);
-
-  const colonnes = [
-    { label: "Année", format: (l) => l.an },
-    { label: "Valeur du contrat", format: (l) => fmtEURPdf(l.valeurContrat) },
-    { label: "Gains latents", format: (l) => fmtEURPdf(l.gainsLatents) },
-    { label: "Impôt si sortie", format: (l) => fmtEURPdf(l.impotSiSortie) },
-  ];
-  dessinerTableauAnnuel(pdfDoc, fonts, "Assurance-vie", PDF_COULEURS.av, dureeAnalyse, colonnes, resultat.detailAnnuel);
+  dessinerTableauAnnuel(pdfDoc, fonts, "Assurance-vie", PDF_COULEURS.av, dureeAnalyse, colonnesAv(), resultat.detailAnnuel, NOTE_UNITE_EUR);
 
   return pdfDoc.save();
 }
@@ -392,7 +442,7 @@ async function exporterPdfGlobal(donnees, dureeAnalyse, tauxActualisation) {
 
   // Résumé + annexe pour chaque support, à la suite
   dessinerResumeImmo(pdfDoc, fonts, dureeAnalyse, donnees.immo.params, donnees.immo.resultat);
-  dessinerTableauAnnuel(pdfDoc, fonts, "Immobilier", PDF_COULEURS.immobilier, dureeAnalyse, colonnesTableauImmo(donnees.immo.params), donnees.immo.resultat.detailAnnuel);
+  dessinerTableauAnnuel(pdfDoc, fonts, "Immobilier", PDF_COULEURS.immobilier, dureeAnalyse, colonnesTableauImmo(donnees.immo.params), donnees.immo.resultat.detailAnnuel, NOTE_UNITE_EUR);
 
   const titresMeta = [
     ["action", "Action", PDF_COULEURS.action, "Dividende"],
@@ -401,21 +451,11 @@ async function exporterPdfGlobal(donnees, dureeAnalyse, tauxActualisation) {
   ];
   titresMeta.forEach(([cle, nom, couleur, labelRevenu]) => {
     dessinerResumeTitre(pdfDoc, fonts, dureeAnalyse, nom, couleur, donnees[cle].params, donnees[cle].resultat, labelRevenu);
-    dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, [
-      { label: "Année", format: (l) => l.an },
-      { label: labelRevenu + " brut", format: (l) => fmtEURPdf(l.revenuBrut) },
-      { label: "Impôt", format: (l) => fmtEURPdf(l.impot) },
-      { label: labelRevenu + " net", format: (l) => fmtEURPdf(l.revenuNet) },
-    ], donnees[cle].resultat.detailAnnuel);
+    dessinerTableauAnnuel(pdfDoc, fonts, nom, couleur, dureeAnalyse, colonnesTitre(labelRevenu), donnees[cle].resultat.detailAnnuel, NOTE_UNITE_EUR);
   });
 
   dessinerResumeAv(pdfDoc, fonts, dureeAnalyse, donnees.av.params, donnees.av.resultat);
-  dessinerTableauAnnuel(pdfDoc, fonts, "Assurance-vie", PDF_COULEURS.av, dureeAnalyse, [
-    { label: "Année", format: (l) => l.an },
-    { label: "Valeur du contrat", format: (l) => fmtEURPdf(l.valeurContrat) },
-    { label: "Gains latents", format: (l) => fmtEURPdf(l.gainsLatents) },
-    { label: "Impôt si sortie", format: (l) => fmtEURPdf(l.impotSiSortie) },
-  ], donnees.av.resultat.detailAnnuel);
+  dessinerTableauAnnuel(pdfDoc, fonts, "Assurance-vie", PDF_COULEURS.av, dureeAnalyse, colonnesAv(), donnees.av.resultat.detailAnnuel, NOTE_UNITE_EUR);
 
   return pdfDoc.save();
 }
@@ -455,13 +495,18 @@ function dessinerPageGardeGlobale(pdfDoc, fonts, donnees, dureeAnalyse, tauxActu
 
   ordre.forEach(([cle, nom, couleur]) => {
     const r = donnees[cle].resultat;
+    // Pour l'immobilier, le "multiple" se rapporte à l'apport réellement sorti de la poche
+    // (donnees.immo.params.apport), pas à la miseInitiale qui inclut frais+travaux+mobilier
+    // financés par le crédit. Pour les 4 autres supports, mise = apport, donc identique.
+    // Corrigé le 22/07/2026, en cohérence avec le correctif engine.js du même jour.
+    const miseRef = cle === "immo" ? donnees.immo.params.apport : r.miseInitiale;
     x = 48;
     page.drawRectangle({ x: 48, y: y - 2, width: 3, height: 9, color: rgb(...couleur) });
     page.drawText(nom, { x: x + 8, y, size: 9, font: fonts.bold, color: rgb(...PDF_COULEURS.texte) }); x += colLargeurs[0];
     page.drawText(fmtPctPdf(r.tri), { x, y, size: 9, font: fonts.regular, color: rgb(...PDF_COULEURS.texte) }); x += colLargeurs[1];
     page.drawText(fmtEURPdf(r.valeurFinaleNette), { x, y, size: 9, font: fonts.regular, color: rgb(...PDF_COULEURS.texte) }); x += colLargeurs[2];
     page.drawText(fmtEURPdf(r.van), { x, y, size: 9, font: fonts.regular, color: rgb(...PDF_COULEURS.texte) }); x += colLargeurs[3];
-    page.drawText((r.valeurFinaleNette / r.miseInitiale).toFixed(2) + "x", { x, y, size: 9, font: fonts.regular, color: rgb(...PDF_COULEURS.texte) });
+    page.drawText((r.valeurFinaleNette / miseRef).toFixed(2) + "x", { x, y, size: 9, font: fonts.regular, color: rgb(...PDF_COULEURS.texte) });
     y -= 18;
   });
 
